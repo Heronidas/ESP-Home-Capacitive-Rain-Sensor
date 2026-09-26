@@ -38,16 +38,18 @@ Result is the *Wetterlage* text: `trocken`, `Tau`, `Niesel`, `trocknet ab`, `Reg
 
 ## Build
 
-**Wiring.** The wire colors are from the sensor I used; verify with a meter (heater about 42 ohm between pins 2 and 5, NTC about 1 kOhm between 3 and 4, capacitor pins 1 and 6 isolated from the rest). The silkscreen prints the sensor pin numbers (`#6`, `#1+4`, ...) at the terminals.
+**Wiring.** Sensor pin numbers as in the RC-SPC1KA datasheet. The silkscreen prints them next to the terminals (`#6`, `#1+4`, ...).
 
-| Sensor pin | Wire | Function | Terminal |
+| Terminal | Board pin | Sensor pin | Function |
 |---|---|---|---|
-| 6 | green | capacitor, oscillator node | SENSOR OSC |
-| 1 | white | capacitor, ground side / outer electrode | SENSOR GND |
-| 4 | pink | NTC | SENSOR GND |
-| 3 | red | NTC | SENSOR NTC |
-| 2 | black | heater, switched ground | HEATER HEAT- |
-| 5 | red | heater, +12 V | HEATER 12V |
+| SENSOR | OSC | 6 | capacitor, oscillator node |
+| SENSOR | GND | 1 and 4 | capacitor ground side (outer electrode), NTC |
+| SENSOR | NTC | 3 | NTC |
+| HEATER | HEAT- | 2 | heater, switched ground |
+| HEATER | 12V | 5 | heater, +12 V |
+| HEATER | GND | not used | |
+
+The sensor has three isolated groups: capacitor (1, 6), heater (2, 5, about 42 ohm) and NTC (3, 4, about 1 kOhm at room temperature). Pins 1 and 4 are joined only on the board, at the SENSOR GND pin. A quick meter check of these values before powering up catches wiring mistakes.
 
 OSC must never touch 12 V. VEML7700 on the I2C terminal or Qwiic, HTU21D in the socket labelled HTU21D. Power on POWER IN (5V, GND; reverse-polarity protected). BAT is only for battery-voltage monitoring (1S Li-ion, up to 4.2 V through the 100k/100k divider); leave it open otherwise.
 
