@@ -4,6 +4,10 @@ Heated capacitive rain sensor for Home Assistant that can grow into a small weat
 
 **Status: rev A, ordered but not yet built or tested.** See [Known limitations](#known-limitations).
 
+![Board layout, top and bottom](docs/board-render.png)
+
+*Rev A, 72 x 56 mm. Left: top side (copper, pads, silkscreen; the ESP32 module is shown as an outline). Right: bottom copper, seen from below.*
+
 ## The sensor
 
 The RC-SPC1KA (Radiocontrolli) is a sealed capacitive rain sensor. There is no exposed metal, so nothing corrodes, and it has two extras: a heater (about 42 ohm, roughly 3.4 W at 12 V) and an NTC (1 kOhm at 25 C) for the surface temperature. Dry it measures about 100 pF; a soaked surface reads several thousand pF.
