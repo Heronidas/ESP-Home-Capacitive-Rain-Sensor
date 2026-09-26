@@ -2,6 +2,22 @@
 
 A rain sensor for Home Assistant that reacts to the first drops, knows the difference between rain and morning dew, and is dry again soon after the shower.
 
+**Contents:**
+[Why build this](#why-build-this) ·
+[What you can do with it](#what-you-can-do-with-it) ·
+[The sensor](#the-sensor) ·
+[How it works](#how-it-works) ·
+[Parts](#parts) ·
+[Build](#build) ·
+[Sensor holder](#sensor-holder-3d-printed) ·
+[Calibration](#calibration) ·
+[Entities in Home Assistant](#entities-in-home-assistant) ·
+[Troubleshooting](#troubleshooting) ·
+[Board reference](#board-reference) ·
+[Ordering](#ordering-jlcpcb) ·
+[Sensors and extensions](#sensors-and-extensions) ·
+[Known limitations](#known-limitations)
+
 ## Why build this
 
 Most cheap rain sensors are either simple contact grids that corrode within a season, or tipping buckets that only report after a measurable amount of water has fallen. Zigbee and Wi-Fi rain sensors from the shop are usually a black box: you get "rain: yes/no" and no way to fix it when it reports dew as rain every morning.
