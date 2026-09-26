@@ -55,42 +55,9 @@ OSC must never touch 12 V. VEML7700 on the I2C terminal or Qwiic, HTU21D in the 
 
 **Flashing.** No USB port on the board; use the UART header J7 (adapter RX to TX, TX to RX, GND to GND) and power the board through POWER IN, since J7 has no power pin. Hold BOOT, tap RESET, release BOOT, then `esphome run firmware/regensensor.yaml`. The config validates with ESPHome 2026.6.5. It needs `secrets.yaml` with `wifi_ssid`, `wifi_password`, `regensensor_api_key`, `regensensor_ota_password`. Set `aussen_temp_entity` and `aussen_feuchte_entity` in the substitutions to your outdoor sensors; if they do not exist the sensors stay empty and the fallback applies.
 
-## Building without the assembled board
+## Building without the PCB
 
-You can skip JLCPCB assembly in two ways.
-
-### Option A: order bare PCBs and solder them yourself
-
-Order the Gerbers from `fabrication/` without assembly and populate the board from the BOM below (also in `fabrication/bom_jlcpcb.csv`, with LCSC numbers). Everything is 0805 or larger except U1 (ESP32 module, castellated edge plus ground pad), U2/U3 (SOT-23-5/-6) and U4 (SOIC-14), so hot air or a fine iron with flux is enough. Solder U1's ground pad first.
-
-| Ref | Value | Package | Note |
-|---|---|---|---|
-| U1 | ESP32-WROOM-32E-N4 | module | |
-| U2 | AP2112K-3.3 | SOT-23-5 | 3.3 V LDO |
-| U3 | MT3608 | SOT-23-6 | boost to 12 V, EN = heater control |
-| U4 | SN74HC14 | SOIC-14 | oscillator |
-| Q1 | AO3401A | SOT-23 | reverse-polarity P-MOSFET |
-| Q2 | AO3400A | SOT-23 | heater low-side switch |
-| D1 | SS34 | SMA | boost diode |
-| L1 | 22 µH, 1.8 A or more | Bourns SRN6045TA | boost inductor |
-| C1, C10, C11 | 22 µF / 25 V | 0805 | |
-| C2, C3, C4 | 10 µF / 25 V | 0805 | |
-| C5, C6, C7, C8 | 100 nF | 0805 | |
-| C9 | 1 µF | 0805 | |
-| R1 | 1 MΩ | 0805 | oscillator resistor |
-| R2, R3 | 5.6 kΩ | 0805 | NTC pull-up (two in parallel) |
-| R4 | 180 kΩ | 0805 | boost feedback |
-| R5, R6, R13, R14 | 10 kΩ | 0805 | |
-| R7, R9, R10 | 100 kΩ | 0805 | |
-| R8 | 100 Ω | 0805 | |
-| R11, R12 | 4.7 kΩ | 0805 | I2C pull-ups |
-| SW1, SW2 | tactile, TL3342 | SMD | BOOT, RESET |
-| J1, J2, J3 | 3-pin screw terminal, 3.5 mm | | power, sensor, heater |
-| J6 | 4-pin screw terminal, 3.5 mm | | I2C |
-| J5 | JST-SH 4-pin, SM04B-SRSS-TB | | Qwiic, optional |
-| J4, J7, J8 | pin socket/header, 2.54 mm | 1x4, 1x5, 1x8 | optional |
-
-### Option B: no PCB, perfboard with modules
+The SMD parts on the board are too small for most people to solder by hand, so the options are the assembled board from JLCPCB (see [Ordering](#ordering-jlcpcb)) or a perfboard build from ready-made modules like the prototype.
 
 The circuit is small. Use an ESP32 dev board (3.3 V regulator on board) and wire the rest on perfboard. Pins are the same as in the [GPIO map](#gpio-map), so the firmware runs unchanged.
 
