@@ -2,21 +2,12 @@
 
 A rain sensor for Home Assistant that reacts to the first drops, knows the difference between rain and morning dew, and is dry again soon after the shower.
 
-**Contents:**
-[Why build this](#why-build-this) ·
-[What you can do with it](#what-you-can-do-with-it) ·
-[The sensor](#the-sensor) ·
-[How it works](#how-it-works) ·
-[Parts](#parts) ·
-[Build](#build) ·
-[Sensor holder](#sensor-holder-3d-printed) ·
-[Calibration](#calibration) ·
-[Entities in Home Assistant](#entities-in-home-assistant) ·
-[Troubleshooting](#troubleshooting) ·
-[Board reference](#board-reference) ·
-[Ordering](#ordering-jlcpcb) ·
-[Sensors and extensions](#sensors-and-extensions) ·
-[Known limitations](#known-limitations)
+| Overview | Build | Use | Reference |
+|---|---|---|---|
+| [Why build this](#why-build-this) | [Parts](#parts) | [Calibration](#calibration) | [Board reference](#board-reference) |
+| [What you can do with it](#what-you-can-do-with-it) | [Build](#build) | [Entities in Home Assistant](#entities-in-home-assistant) | [Ordering](#ordering-jlcpcb) |
+| [The sensor](#the-sensor) | [Sensor holder](#sensor-holder-3d-printed) | [Troubleshooting](#troubleshooting) | [Sensors and extensions](#sensors-and-extensions) |
+| [How it works](#how-it-works) | | | [Known limitations](#known-limitations) |
 
 ## Why build this
 
