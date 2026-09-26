@@ -189,7 +189,7 @@ Names are German (the firmware began as a private project); kept for compatibili
 Two ways, both optional. Without outdoor data the firmware uses the fallback (surface colder than the enclosure air, and dark).
 
 * **Substitutions.** Set `aussen_temp_entity` and `aussen_feuchte_entity` in the YAML. Works, but Home Assistant can take up to a minute to deliver the values after boot, so it does not help in night mode (the device is awake for about 35 s).
-* **Blueprint.** `blueprints/regensensor_aussenluft.yaml`: pick your outdoor sensors in the UI; it pushes them through the `set_aussenluft(temperatur, feuchte)` action on the first reading after each wake-up. Copy the file to `config/blueprints/automation/` (or import it from the GitHub URL) and create an automation from it. Not yet tested.
+* **Blueprint.** `blueprints/regensensor_aussenluft.yaml`: pick your outdoor sensors in the UI (trigger sensor: *NTC Widerstand* of the Regensensor); it pushes them through the `set_aussenluft(temperatur, feuchte)` action on the first reading after each wake-up. Copy the file to `config/blueprints/automation/` (or import it from the GitHub URL) and create an automation from it. Not yet tested.
 
 ## Troubleshooting
 
