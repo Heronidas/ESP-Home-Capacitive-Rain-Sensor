@@ -55,6 +55,26 @@ OSC must never touch 12 V. VEML7700 on the I2C terminal or Qwiic, HTU21D in the 
 
 **Flashing.** No USB port on the board; use the UART header J7 (adapter RX to TX, TX to RX, GND to GND) and power the board through POWER IN, since J7 has no power pin. Hold BOOT, tap RESET, release BOOT, then `esphome run firmware/regensensor.yaml`. The config validates with ESPHome 2026.6.5. It needs `secrets.yaml` with `wifi_ssid`, `wifi_password`, `regensensor_api_key`, `regensensor_ota_password`. Set `aussen_temp_entity` and `aussen_feuchte_entity` in the substitutions to your outdoor sensors; if they do not exist the sensors stay empty and the fallback applies.
 
+## Sensor holder (3D printed)
+
+`mechanical/sensor-holder.stl`, about 228 x 124 x 50 mm, fits a 256 mm printer bed. The file contains **three parts; separate them in the slicer** (Bambu Studio: right click, Split, To Parts).
+
+![Sensor holder](docs/sensor-holder.png)
+
+**Material and finish**
+* **ASA, white.** ASA is UV and weather resistant, white keeps the head from heating up in the sun. PLA and PETG are not suitable for permanent outdoor use here.
+* FDM prints are not watertight (layer lines are porous). Seal the printed parts with a **clear lacquer** (UV-stable, outdoor type) so moisture cannot creep into the holder. Keep the sensor face itself free of lacquer.
+
+**Mounting the sensor**
+* **Glue it in carefully.** The back of the RC-SPC1KA with the heater and NTC solder pads is **not protected against corrosion**. The bond has to be fully sealed around the whole sensor edge so no water reaches the rear. The prototype uses a transparent MS polymer adhesive (UHU Polymax Express) and Kapton tape over the pads on the back.
+* Neutral-curing adhesives only. Acetic-acid (vinegar smell) silicone attacks solder joints and copper.
+* Degrease the bonding surfaces (isopropanol) and let the adhesive cure fully before going outside.
+* Keep glue off the sensor face and away from the edge where water runs off; a glue bead there holds a water film and reads as wet.
+* Solder the wires and **test the sensor and the VEML7700 before gluing**; afterwards nothing is reworkable.
+* Route the cable so it leaves the holder downwards, with a drip loop, and add strain relief. Use a cable rated for outdoor use (plain LiYY is not UV resistant; protect it or use an outdoor type).
+* If the VEML7700 sits behind a cover or lacquer, set `veml_glasfaktor` in the YAML.
+* Use stainless screws for the wall mounting.
+
 ## Calibration
 
 1. **Dry frequency.** Surface dry, heater off. Average *Frequenz* over a few minutes and enter it as *Trockenfrequenz*. The default in the YAML (13549 Hz) is a placeholder from the vendor example.
@@ -167,6 +187,7 @@ IO32 is also the alternative NTC pull-up drive (see solder jumpers). The expansi
 * `hardware/` KiCad project (schematic, PCB)
 * `fabrication/` Gerbers, drill, JLCPCB BOM/CPL
 * `firmware/` ESPHome config
+* `mechanical/` sensor holder STL
 * `tools/` scripts that generated the schematic/PCB/fab files from `design.py`
 * `.github/workflows/fab.yml` CI: DRC + Gerber export
 
