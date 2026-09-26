@@ -55,6 +55,82 @@ OSC must never touch 12 V. VEML7700 on the I2C terminal or Qwiic, HTU21D in the 
 
 **Flashing.** No USB port on the board; use the UART header J7 (adapter RX to TX, TX to RX, GND to GND) and power the board through POWER IN, since J7 has no power pin. Hold BOOT, tap RESET, release BOOT, then `esphome run firmware/regensensor.yaml`. The config validates with ESPHome 2026.6.5. It needs `secrets.yaml` with `wifi_ssid`, `wifi_password`, `regensensor_api_key`, `regensensor_ota_password`. Set `aussen_temp_entity` and `aussen_feuchte_entity` in the substitutions to your outdoor sensors; if they do not exist the sensors stay empty and the fallback applies.
 
+## Building without the assembled board
+
+You can skip JLCPCB assembly in two ways.
+
+### Option A: order bare PCBs and solder them yourself
+
+Order the Gerbers from `fabrication/` without assembly and populate the board from the BOM below (also in `fabrication/bom_jlcpcb.csv`, with LCSC numbers). Everything is 0805 or larger except U1 (ESP32 module, castellated edge plus ground pad), U2/U3 (SOT-23-5/-6) and U4 (SOIC-14), so hot air or a fine iron with flux is enough. Solder U1's ground pad first.
+
+| Ref | Value | Package | Note |
+|---|---|---|---|
+| U1 | ESP32-WROOM-32E-N4 | module | |
+| U2 | AP2112K-3.3 | SOT-23-5 | 3.3 V LDO |
+| U3 | MT3608 | SOT-23-6 | boost to 12 V, EN = heater control |
+| U4 | SN74HC14 | SOIC-14 | oscillator |
+| Q1 | AO3401A | SOT-23 | reverse-polarity P-MOSFET |
+| Q2 | AO3400A | SOT-23 | heater low-side switch |
+| D1 | SS34 | SMA | boost diode |
+| L1 | 22 µH, 1.8 A or more | Bourns SRN6045TA | boost inductor |
+| C1, C10, C11 | 22 µF / 25 V | 0805 | |
+| C2, C3, C4 | 10 µF / 25 V | 0805 | |
+| C5, C6, C7, C8 | 100 nF | 0805 | |
+| C9 | 1 µF | 0805 | |
+| R1 | 1 MΩ | 0805 | oscillator resistor |
+| R2, R3 | 5.6 kΩ | 0805 | NTC pull-up (two in parallel) |
+| R4 | 180 kΩ | 0805 | boost feedback |
+| R5, R6, R13, R14 | 10 kΩ | 0805 | |
+| R7, R9, R10 | 100 kΩ | 0805 | |
+| R8 | 100 Ω | 0805 | |
+| R11, R12 | 4.7 kΩ | 0805 | I2C pull-ups |
+| SW1, SW2 | tactile, TL3342 | SMD | BOOT, RESET |
+| J1, J2, J3 | 3-pin screw terminal, 3.5 mm | | power, sensor, heater |
+| J6 | 4-pin screw terminal, 3.5 mm | | I2C |
+| J5 | JST-SH 4-pin, SM04B-SRSS-TB | | Qwiic, optional |
+| J4, J7, J8 | pin socket/header, 2.54 mm | 1x4, 1x5, 1x8 | optional |
+
+### Option B: no PCB, perfboard with modules
+
+The circuit is small. Use an ESP32 dev board (3.3 V regulator on board) and wire the rest on perfboard. Pins are the same as in the [GPIO map](#gpio-map), so the firmware runs unchanged.
+
+Parts:
+
+* ESP32 dev board (30 or 38 pin, any with GPIO13, 21, 22, 25, 34, 35 broken out)
+* SN74HC14 (DIP-14 works), 100 nF, 1 MΩ
+* NTC pull-up: 2.8 kΩ (two 5.6 kΩ in parallel, or 2.7 kΩ), 100 nF
+* MT3608 boost module, set to 12 V
+* N-MOSFET, logic level, e.g. IRLZ44N or AO3400A on a breakout, 100 Ω gate resistor, 100 kΩ gate pull-down
+* Optional battery monitor: 2 x 100 kΩ
+
+Wiring:
+
+| From | To |
+|---|---|
+| 74HC14 pin 14 | 3.3 V, with 100 nF to GND next to it |
+| 74HC14 pin 7 | GND |
+| 74HC14 pins 3, 5, 9, 11, 13 | GND (unused inputs) |
+| 74HC14 pin 2 (output) | GPIO25 |
+| 1 MΩ | between 74HC14 pins 1 and 2 |
+| Sensor pin 6 (OSC) | 74HC14 pin 1 |
+| Sensor pins 1 and 4 | GND |
+| Sensor pin 3 (NTC) | GPIO34, 2.8 kΩ to 3.3 V, 100 nF to GND |
+| Sensor pin 5 (+12 V) | boost module OUT+ |
+| Sensor pin 2 (HEAT-) | MOSFET drain |
+| MOSFET source | GND |
+| MOSFET gate | GPIO13 via 100 Ω, 100 kΩ from gate to GND |
+| Boost module IN+ / GND | 5 V supply / GND |
+| Boost module GND, ESP32 GND | common ground |
+| I2C SDA / SCL | GPIO21 / GPIO22, 4.7 kΩ pull-ups to 3.3 V |
+| Battery (optional) | 100 kΩ to GPIO35, 100 kΩ from GPIO35 to GND, `batt_teiler_faktor` 2.0 |
+
+Notes:
+
+* Keep the wire from sensor pin 6 to the 74HC14 short, the oscillator input is high impedance. Long leads add capacitance and shift the readings. Then re-run the [calibration](#calibration).
+* Set the boost module to 12 V before connecting the sensor. Check with a multimeter.
+* Modules without an enable pin keep the boost converter running all the time. That costs idle current, so it is fine on a mains supply and a poor choice for battery operation. The board switches the converter off through the MT3608 EN pin.
+* Power the 74HC14 from the ESP32's 3.3 V, not 5 V, so the oscillator output stays within GPIO limits.
+
 ## Sensor holder (3D printed)
 
 `mechanical/sensor-holder.stl`, about 228 x 124 x 50 mm, fits a 256 mm printer bed. The file contains **three parts; separate them in the slicer** (Bambu Studio: right click, Split, To Parts).
