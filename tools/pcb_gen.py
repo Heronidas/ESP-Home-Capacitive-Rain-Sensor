@@ -10,7 +10,7 @@ for k,v in placement.POS.items(): C[k]['pcb']=v
 OX, OY = 100.0, 80.0
 out = sys.argv[1]
 FPDIR = "/usr/share/kicad/footprints"
-PROJ_LIB = "/home/claude/rain-sensor-board/hardware/rain-sensor.pretty"
+PROJ_LIB = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "hardware", "rain-sensor.pretty")
 
 def P(x, y): return VECTOR2I(FromMM(OX + x), FromMM(OY + y))
 

@@ -2,7 +2,7 @@
 
 Heated capacitive rain sensor for Home Assistant that can grow into a small weather station: KiCad carrier board (orderable assembled from JLCPCB), ESPHome firmware and build notes.
 
-**Status: rev A, ordered but not yet built or tested.** See [Known limitations](#known-limitations--to-verify-before-ordering).
+**Status: rev A, ordered but not yet built or tested.** See [Known limitations](#known-limitations).
 
 ## The sensor
 
@@ -216,22 +216,22 @@ Silkscreen: each screw terminal is labelled below the block with pin function an
 
 IO32 is also the alternative NTC pull-up drive (see solder jumpers). The expansion header has no 5 V pin.
 
-## Known limitations / to verify before ordering
+## Known limitations
 * Footprints for the screw terminals (Phoenix PT 1,5 3.5 mm screw terminal as stand-in for KF350-3.5), the inductor (Bourns SRN6045TA stand-in for CKCS6028) must be compared against the datasheets of the parts you actually use.
-* CPL rotations were corrected against the JLCPCB placement preview (U2/U3); other parts should be re-checked by anyone ordering.
 * C1/C10/C11 (22 uF, 25 V, 0805) lose most capacity at 12 V DC bias; the boost is stable with it but check part availability.
 * Feedback divider draws ~24 uA and the NTC pull-up ~0.9 mA permanently unless the GPIO32 option is used (matters for deep-sleep battery use).
 * DRC: one intended report remains, the bridged solder jumper SJ2 (deliberate short to GND). Library-not-found warnings appear only if the KiCad footprint libraries are not configured.
 * The files were generated with KiCad 7 file formats; KiCad 8-10 upgrade them on opening. Save once and re-run DRC.
 * The threshold defaults and the wetting-percent curve are starting values, not from a finished wet test.
-* Not yet built or tested. Treat rev A as a prototype.
+* Rev A is a prototype: not yet built or tested. The results will be added here.
 
 ## Repository
 * `hardware/` KiCad project (schematic, PCB)
 * `fabrication/` Gerbers, drill, JLCPCB BOM/CPL
 * `firmware/` ESPHome config
+* `docs/` images
 * `mechanical/` sensor holder STL
-* `tools/` scripts that generated the schematic/PCB/fab files from `design.py`
+* `tools/` Python scripts (KiCad 7 `pcbnew`) that generate the schematic, PCB and fab files from `design.py`
 * `.github/workflows/fab.yml` CI: DRC + Gerber export
 
 ## Support
@@ -241,4 +241,4 @@ If this project saved you some time, you can support it on Ko-fi. Not required, 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/heronidas)
 
 ## License
-Hardware CERN-OHL-P-2.0, firmware/docs MIT, see `LICENSE.md`.
+Hardware, fabrication files and holder: CERN-OHL-P-2.0. Firmware, docs and tools: MIT. See `LICENSE.md`.

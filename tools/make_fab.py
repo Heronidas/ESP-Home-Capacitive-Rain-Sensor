@@ -2,9 +2,10 @@ import sys, os, csv, re, subprocess, shutil
 sys.path.insert(0, os.path.dirname(__file__))
 import pcbnew
 from design import C
-H = "/home/claude/rain-sensor-board/hardware"
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+H = f"{ROOT}/hardware"
 pcb = f"{H}/regensensor.kicad_pcb"
-out = "/home/claude/rain-sensor-board/fabrication"
+out = f"{ROOT}/fabrication"
 shutil.rmtree(out, ignore_errors=True); os.makedirs(f"{out}/gerbers")
 layers = "F.Cu,B.Cu,F.Paste,F.Silkscreen,B.Silkscreen,F.Mask,B.Mask,Edge.Cuts"
 subprocess.run(["kicad-cli","pcb","export","gerbers","--layers",layers,"--no-x2","--use-drill-file-origin","--subtract-soldermask","-o",f"{out}/gerbers/",pcb],check=True)
