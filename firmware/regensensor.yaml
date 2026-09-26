@@ -256,14 +256,14 @@ number:
     mode: box
     entity_category: config
 
-  # Night window, may span midnight (22 to 5). Equal values = never sleep.
+  # Night window in half hours (22.5 = 22:30), may span midnight. Equal values = never sleep.
   - platform: template
     name: "Nachtmodus von"
     id: schlaf_von
-    unit_of_measurement: "h"
+    unit_of_measurement: "Uhr"
     min_value: 0
-    max_value: 23
-    step: 1
+    max_value: 23.5
+    step: 0.5
     initial_value: 22
     restore_value: true
     optimistic: true
@@ -273,10 +273,10 @@ number:
   - platform: template
     name: "Nachtmodus bis"
     id: schlaf_bis
-    unit_of_measurement: "h"
+    unit_of_measurement: "Uhr"
     min_value: 0
-    max_value: 23
-    step: 1
+    max_value: 23.5
+    step: 0.5
     initial_value: 5
     restore_value: true
     optimistic: true
@@ -880,13 +880,13 @@ interval:
                   float fvon = id(schlaf_von).state;
                   float fbis = id(schlaf_bis).state;
                   if (isnan(fvon) || isnan(fbis)) return false;
-                  int von = (int) fvon;
-                  int bis = (int) fbis;
+                  int von = (int) roundf(fvon * 2);
+                  int bis = (int) roundf(fbis * 2);
                   if (von == bis) return false;            // empty window
 
                   auto jetzt = id(uhr).now();
                   if (jetzt.is_valid()) {
-                    int h = jetzt.hour;
+                    int h = jetzt.hour * 2 + (jetzt.minute >= 30 ? 1 : 0);
                     bool drin = (von < bis) ? (h >= von && h < bis)
                                             : ((h >= von) || (h < bis));
                     id(g_nacht) = drin;

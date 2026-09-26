@@ -142,7 +142,7 @@ Names are German (the firmware began as a private project); kept for compatibili
 | Oberflächentemperatur | sensor surface temperature |
 | Taupunkt, Abstand zum Taupunkt | outdoor dew point, surface minus dew point |
 | Heizung, Automatikbetrieb | heater switch, master switch for automatic heating and night mode |
-| Nachtmodus | allows deep sleep in the night window (off by default) |
+| Nachtmodus, Nachtmodus von/bis | allows deep sleep in the night window (off by default); window in half hours, e.g. 22.5 = 22:30 |
 | Heizsperre aktiv, Heizkonto, Sperre verbleibend | heating-time limit |
 | Trockenfrequenz, *-schwelle, ... | calibration and settings, adjustable at runtime |
 | Helligkeit, Sonneneinstrahlung, Box Temperatur/Luftfeuchte, Batteriespannung | optional sensors |
