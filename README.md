@@ -6,7 +6,9 @@ Heated capacitive rain sensor for Home Assistant that can grow into a small weat
 
 ## The sensor
 
-The RC-SPC1KA (Radiocontrolli, around 13 EUR at Novaut or TME) is a sealed capacitive rain sensor. There is no exposed metal, so nothing corrodes, and it has two extras: a heater (about 42 ohm, roughly 3.4 W at 12 V) and an NTC (1 kOhm at 25 C) for the surface temperature. Dry it measures about 100 pF; a soaked surface reads several thousand pF.
+The RC-SPC1KA (Radiocontrolli) is a sealed capacitive rain sensor. There is no exposed metal, so nothing corrodes, and it has two extras: a heater (about 42 ohm, roughly 3.4 W at 12 V) and an NTC (1 kOhm at 25 C) for the surface temperature. Dry it measures about 100 pF; a soaked surface reads several thousand pF.
+
+Available from distributors, for example [Novaut](https://www.novaut.com/en/620521-rc-spc1ka-radiocontrolli.html) (about 13 EUR incl. VAT, EU shipping), [TME](https://www.tme.com/us/en-us/details/rc-spc1ka/humidity-sensors/radiocontrolli/) or [DigiKey](https://www.digikey.com/en/products/detail/radiocontrolli/RC-SPC1KA/13688193). Prices and stock as of 2026-09; not affiliated with any of them.
 
 It is only the element, so this project adds the rest: a board that reads it and powers the heater from 5 V, and firmware that turns the raw readings into rain / dew / drizzle / dry and runs the heater safely.
 
