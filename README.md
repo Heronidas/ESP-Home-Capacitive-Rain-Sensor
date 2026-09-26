@@ -1,12 +1,27 @@
-# Rain Sensor Board (RC-SPC1KA + ESP32)
+# ESPHome Capacitive Rain Sensor (RC-SPC1KA + ESP32)
 
-Open-hardware carrier board for the capacitive rain sensor **RC-SPC1KA** (capacitance + heater + NTC) with an **ESP32-WROOM-32E** soldered on the board and **ESPHome** firmware. Made to be ordered fully assembled from JLCPCB (or bare from any other fab).
+Complete build of a heated capacitive rain sensor that can grow into a small weather station. The carrier board takes 5 V (for example from a solar power manager), generates the 12 V for the sensor heater, and carries an ESP32 that measures the sensor's oscillator frequency. I2C sensors (light, temperature, humidity, pressure) plug into Qwiic, a socket or a screw terminal; an expansion header brings out six GPIOs for wind or other sensors. The ESPHome firmware tells rain from dew and drizzle, controls the heater with safety limits, and supports a deep-sleep night mode for battery use.
+
+Made to be ordered fully assembled from JLCPCB (or bare from any other fab). Status: rev A, not yet built or tested.
 
 * 72 x 56 mm, 2 layers, 4x M3 holes, ESP32 antenna overhangs the top edge (keep metal and enclosure walls away from it)
 * Input: **5 V** (e.g. Waveshare Solar Power Manager (D), USB, any 5 V supply, <= 3 A). No solar/battery charging on this board.
 * On board: AP2112K 3.3 V LDO, MT3608 boost to a fixed **12 V** for the sensor heater (switched by GPIO13 through a low-side MOSFET), reverse-polarity PMOS, SN74HC14 relaxation oscillator, NTC divider, optional battery-voltage divider, I2C pull-ups, BOOT/RESET buttons, UART header
 * I2C: Qwiic/STEMMA-QT (JST-SH), 1x4 2.54 mm socket and a 4-pin screw terminal, all in parallel
 * Firmware: `firmware/regensensor.yaml`
+
+## Sensors and extensions
+
+| Sensor | Connection | Status |
+|---|---|---|
+| RC-SPC1KA (capacitance, NTC, heater) | screw terminals SENSOR / HEATER | in firmware |
+| VEML7700 light sensor | I2C (Qwiic, socket or terminal), address 0x10 | in firmware |
+| HTU21D temperature/humidity (inside the enclosure) | I2C, socket labelled HTU21D | in firmware |
+| Battery voltage | J1 pin BAT | in firmware |
+| Pressure (BME280/BMP280), UV (LTR390), CO2 etc. | I2C, 3.3 V modules | hardware supports it, no ESPHome config yet, untested |
+| Wind (pulse anemometer), tipping bucket, DS18B20 | expansion header J8: 3V3, GND, IO32, IO33, IO26, IO27, IO14, IO4 | hardware supports it, no ESPHome config yet, untested |
+
+IO32 is also the alternative NTC pull-up drive (see solder jumpers). The expansion header has no 5 V pin.
 
 ## Connectors
 
