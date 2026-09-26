@@ -66,7 +66,7 @@ Result is the *Wetterlage* text: `trocken`, `Tau`, `Niesel`, `trocknet ab`, `Reg
 
 **Heater.** Wet but not raining hard: heat, so the sensor reports dry soon after the rain stops (and melts snow and frost). Off at 45 C surface temperature, back on below 40 C, checked every second (about 0.7 K/s heating rate). No heating during real rain. Heating time is budgeted (default 15 min, then a 2 h pause) so fog or drizzle cannot keep it running for hours. Implausible NTC readings (open or shorted wire) switch it off. It always starts off after a reset.
 
-**Battery.** Optional night mode: deep sleep with a 5 min wake interval. Off by default.
+**Battery.** Optional night mode: deep sleep with a 5 min wake interval, awake about 35 s per cycle. Off by default.
 
 ## Parts
 
@@ -184,7 +184,12 @@ Names are German (the firmware began as a private project); kept for compatibili
 | Trockenfrequenz, *-schwelle, ... | calibration and settings, adjustable at runtime |
 | Helligkeit, Sonneneinstrahlung, Box Temperatur/Luftfeuchte, Batteriespannung | optional sensors |
 
-The API action `set_aussenluft(temperatur, feuchte)` lets an automation push outdoor values instead of subscribing to entities.
+### Outdoor air for the dew point
+
+Two ways, both optional. Without outdoor data the firmware uses the fallback (surface colder than the enclosure air, and dark).
+
+* **Substitutions.** Set `aussen_temp_entity` and `aussen_feuchte_entity` in the YAML. Works, but Home Assistant can take up to a minute to deliver the values after boot, so it does not help in night mode (the device is awake for about 35 s).
+* **Blueprint.** `blueprints/regensensor_aussenluft.yaml`: pick your outdoor sensors in the UI; it pushes them through the `set_aussenluft(temperatur, feuchte)` action on the first reading after each wake-up. Copy the file to `config/blueprints/automation/` (or import it from the GitHub URL) and create an automation from it. Not yet tested.
 
 ## Troubleshooting
 
@@ -270,6 +275,7 @@ IO32 is also the alternative NTC pull-up drive (see solder jumpers). The expansi
 * `hardware/` KiCad project (schematic, PCB)
 * `fabrication/` Gerbers, drill, JLCPCB BOM/CPL
 * `firmware/` ESPHome config
+* `blueprints/` Home Assistant blueprint for outdoor air
 * `docs/` images
 * `mechanical/` sensor holder STL
 * `tools/` Python scripts (KiCad 7 `pcbnew`) that generate the schematic, PCB and fab files from `design.py`

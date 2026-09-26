@@ -54,7 +54,7 @@ substitutions:
 
   # Night mode (deep sleep, RTC timer wake).
   schlaf_intervall: 5min
-  schlaf_wachzeit: "25000"      # ms awake before sleeping
+  schlaf_wachzeit: "35000"      # ms awake before sleeping
 
 
 esphome:
@@ -866,7 +866,7 @@ interval:
 
   # Night mode. Sleep only if all conditions hold; otherwise stay awake
   # (a sleeping device is unreachable and does not measure).
-  - interval: 15s
+  - interval: 5s
     then:
       - if:
           condition:
