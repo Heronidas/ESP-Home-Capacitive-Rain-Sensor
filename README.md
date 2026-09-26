@@ -163,7 +163,7 @@ Notes:
 
 1. **Dry frequency.** Surface dry, heater off. Average *Frequenz* over a few minutes and enter it as *Trockenfrequenz*. The default in the YAML (13549 Hz) is a placeholder from the vendor example.
 2. **NTC.** Reference thermometer next to the head, same air, no sun, heater off for 30 min. Trim with `adc_faktor` (coarse) or *NTC Offset* (fine, +-5 K). Do not calibrate against air temperature under a clear night sky: the plate is legitimately colder, that is the dew signal.
-3. **Thresholds.** Start values: display 300 pF, heat 380 pF, rain 650 pF (the datasheet table gives 320 / 450 / 2000). Run a wet test and set your own via the number entities; no reflash.
+3. **Thresholds.** Start values: display 300 pF, heat 380 pF, rain 650 pF (the datasheet table gives 320 / 450 / 2000). Adjust them via the number entities; no reflash.
 4. **Humid nights.** Note the maximum capacitance in a dry but humid night and keep the thresholds above it (*Abstand zum Taupunkt* helps), otherwise every fog reads as wet.
 5. Leave *Automatikbetrieb* off the first night to see the raw values without heater influence.
 
@@ -268,7 +268,6 @@ IO32 is also the alternative NTC pull-up drive (see solder jumpers). The expansi
 * Feedback divider draws ~24 uA and the NTC pull-up ~0.9 mA permanently unless the GPIO32 option is used (matters for deep-sleep battery use).
 * DRC: one intended report remains, the bridged solder jumper SJ2 (deliberate short to GND). Library-not-found warnings appear only if the KiCad footprint libraries are not configured.
 * The files were generated with KiCad 7 file formats; KiCad 8-10 upgrade them on opening. Save once and re-run DRC.
-* The threshold defaults and the wetting-percent curve are starting values, not from a finished wet test.
 * Rev A is a prototype: not yet built or tested. The results will be added here.
 
 ## Repository

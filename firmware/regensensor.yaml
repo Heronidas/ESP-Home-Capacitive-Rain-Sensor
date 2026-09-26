@@ -513,8 +513,7 @@ sensor:
     accuracy_decimals: 0
     update_interval: never
 
-  # Wetting in percent for display. The points are placeholders from the
-  # datasheet table (100 pF dry), not from a wet test.
+  # Wetting in percent for display, points from the datasheet table (100 pF dry).
   - platform: copy
     source_id: kapazitaet
     name: "Benetzung"
