@@ -1,0 +1,8 @@
+secrets.yaml
+.esphome/
+*.kicad_prl
+*-backups/
+_autosave-*
+fp-info-cache
+*.bak
+__pycache__/

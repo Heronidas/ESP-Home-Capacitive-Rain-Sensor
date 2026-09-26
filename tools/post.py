@@ -1,0 +1,113 @@
+import sys, math
+import pcbnew
+from pcbnew import VECTOR2I, FromMM, ToMM
+src, dst = sys.argv[1], sys.argv[2]
+b = pcbnew.LoadBoard(src)
+gnd = b.FindNet("GND")
+VIA_D, VIA_DR, CLR = 0.6, 0.3, 0.2
+
+def items_other():
+    out = []
+    for fp in b.GetFootprints():
+        for p in fp.Pads():
+            if p.GetNetCode() != gnd.GetNetCode(): out.append(p)
+    for t in b.GetTracks():
+        if t.GetNetCode() != gnd.GetNetCode(): out.append(t)
+    return out
+
+def clear(shape_list, others, pos_shapes):
+    for o in others:
+        os_ = o.GetEffectiveShape()
+        for s in pos_shapes:
+            if os_.Collide(s, FromMM(CLR)): return False
+    return True
+
+from pcbnew import SHAPE_SEGMENT, SHAPE_CIRCLE
+def seg(a, c, w):
+    return SHAPE_SEGMENT(a, c, FromMM(w))
+def circ(p, d):
+    return SHAPE_CIRCLE(p, FromMM(d / 2))
+
+import re, tempfile, os
+def unconnected():
+    pcbnew.ZONE_FILLER(b).Fill(b.Zones())
+    tmp = tempfile.mktemp(suffix='.rpt')
+    pcbnew.WriteDRCReport(b, tmp, pcbnew.EDA_UNITS_MILLIMETRES, True)
+    txt = open(tmp).read(); os.remove(tmp)
+    out = set()
+    for blk in txt.split('\n[')[0:]:
+        if 'unconnected_items' in blk[:30]:
+            for m in re.finditer(r'Pad (\S+) \[GND\] of (\S+)', blk): out.add((m.group(2), m.group(1)))
+    return out
+todo = unconnected()
+print('unconnected GND pads:', sorted(todo))
+placed = []
+n_new = 0
+for fp in b.GetFootprints():
+    for pad in fp.Pads():
+        if pad.GetNetCode() != gnd.GetNetCode(): continue
+        if (fp.GetReference(), pad.GetNumber()) not in todo: continue
+        if pad.GetAttribute() == pcbnew.PAD_ATTRIB_PTH or pad.GetAttribute() == pcbnew.PAD_ATTRIB_NPTH: continue
+        if fp.GetReference().startswith("U1") and pad.GetNumber() == "39": continue  # thermal pad: many vias below
+        c = pad.GetPosition()
+        # skip if already has a via/track from GND (none routed) -> always add
+        done = False
+        for r in [1.1, 1.3, 1.5, 1.8, 2.2, 2.6, 3.0, 3.5, 4.0]:
+            for ang in range(0, 360, 15):
+                p = VECTOR2I(c.x + FromMM(r * math.cos(math.radians(ang))), c.y + FromMM(r * math.sin(math.radians(ang))))
+                shapes = [circ(p, VIA_D + 0.0), seg(c, p, 0.3)]
+                if not clear(None, items_other() + placed, shapes): continue
+                # keep off board edge
+                bb = b.GetBoardEdgesBoundingBox()
+                if not bb.Contains(VECTOR2I(p.x, p.y)) or p.y - bb.GetTop() < FromMM(1.0) and False: continue
+                v = pcbnew.PCB_VIA(b); v.SetPosition(p); v.SetWidth(FromMM(VIA_D)); v.SetDrill(FromMM(VIA_DR))
+                v.SetViaType(pcbnew.VIATYPE_THROUGH); v.SetLayerPair(pcbnew.F_Cu, pcbnew.B_Cu); v.SetNet(gnd)
+                t = pcbnew.PCB_TRACK(b); t.SetStart(c); t.SetEnd(p); t.SetWidth(FromMM(0.3)); t.SetLayer(pcbnew.F_Cu if pad.IsOnLayer(pcbnew.F_Cu) else pcbnew.B_Cu); t.SetNet(gnd)
+                b.Add(v); b.Add(t); placed += [v, t]; n_new += 1; done = True; break
+            if done: break
+        if not done: print("NO GND VIA for", fp.GetReference(), pad.GetNumber())
+print("gnd vias", n_new)
+
+# ---- stitch every F.Cu pour fragment to the B.Cu plane
+def stitch():
+    added = 0
+    fz = [z for z in b.Zones() if z.GetFirstLayer() == pcbnew.F_Cu][0]
+    ps = fz.GetFilledPolysList(pcbnew.F_Cu)
+    vias = [v for v in b.GetTracks() if v.Type() == pcbnew.PCB_VIA_T and v.GetNetCode() == gnd.GetNetCode()]
+    for i in range(ps.OutlineCount()):
+        o = pcbnew.SHAPE_POLY_SET(); o.AddOutline(ps.Outline(i))
+        for h in range(ps.HoleCount(i)): o.AddHole(ps.Hole(i, h))
+        bb = o.BBox()
+        if any(bb.Contains(v.GetPosition()) and o.Collide(v.GetPosition()) for v in vias): continue
+        # candidate grid
+        best = None
+        step = FromMM(0.1)
+        x = bb.GetX()
+        while x < bb.GetRight() and best is None:
+            y = bb.GetY()
+            while y < bb.GetBottom():
+                pt = VECTOR2I(x, y)
+                if pt.x < FromMM(100 + 1.0) or pt.x > FromMM(100 + 72 - 1.0) or pt.y < FromMM(80 + 1.0) or pt.y > FromMM(80 + 56 - 1.0):
+                    y += step; continue
+                ok = all(o.Collide(VECTOR2I(pt.x + int(FromMM(0.3) * math.cos(a)), pt.y + int(FromMM(0.3) * math.sin(a)))) for a in [k * math.pi / 4 for k in range(8)]) and o.Collide(pt)
+                if ok and clear(None, items_other(), [circ(pt, VIA_D)]): best = pt; break
+                y += step
+            x += step
+        if best is None: continue
+        v = pcbnew.PCB_VIA(b); v.SetPosition(best); v.SetWidth(FromMM(VIA_D)); v.SetDrill(FromMM(VIA_DR))
+        v.SetViaType(pcbnew.VIATYPE_THROUGH); v.SetLayerPair(pcbnew.F_Cu, pcbnew.B_Cu); v.SetNet(gnd); b.Add(v); added += 1
+    return added
+for _ in range(3):
+    pcbnew.ZONE_FILLER(b).Fill(b.Zones())
+    a = stitch(); print('stitch vias', a)
+    if a == 0: break
+
+tmp = tempfile.mktemp(suffix='.rpt'); pcbnew.ZONE_FILLER(b).Fill(b.Zones())
+pcbnew.WriteDRCReport(b, tmp, pcbnew.EDA_UNITS_MILLIMETRES, True); txt = open(tmp).read(); os.remove(tmp)
+for m in re.finditer(r'starved_thermal.*?Pad (\S+) \[GND\] of (\S+)', txt, re.S):
+    fp = b.FindFootprintByReference(m.group(2))
+    for pad in fp.Pads():
+        if pad.GetNumber() == m.group(1): pad.SetZoneConnection(pcbnew.ZONE_CONNECTION_FULL); print('full connection', m.group(2), m.group(1))
+pcbnew.ZONE_FILLER(b).Fill(b.Zones())
+print('remaining', sorted(unconnected()))
+b.Save(dst)
