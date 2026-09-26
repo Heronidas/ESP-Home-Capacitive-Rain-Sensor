@@ -67,6 +67,8 @@ esp32:
     type: arduino
 
 logger:
+  logs:
+    pulse_counter: INFO
 
 api:
   encryption:
