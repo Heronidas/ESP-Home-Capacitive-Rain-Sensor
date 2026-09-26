@@ -234,5 +234,11 @@ IO32 is also the alternative NTC pull-up drive (see solder jumpers). The expansi
 * `tools/` scripts that generated the schematic/PCB/fab files from `design.py`
 * `.github/workflows/fab.yml` CI: DRC + Gerber export
 
+## Support
+
+If this project saved you some time, you can support it on Ko-fi. Not required, always appreciated.
+
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/heronidas)
+
 ## License
 Hardware CERN-OHL-P-2.0, firmware/docs MIT, see `LICENSE.md`.
