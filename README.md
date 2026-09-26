@@ -1,166 +1,94 @@
 # ESPHome Capacitive Rain Sensor (RC-SPC1KA + ESP32)
 
-A complete build of a heated capacitive rain sensor for Home Assistant that can grow into a small weather station: carrier board (KiCad, ready to order assembled from JLCPCB), ESPHome firmware and a build guide.
+Heated capacitive rain sensor for Home Assistant that can grow into a small weather station: KiCad carrier board (orderable assembled from JLCPCB), ESPHome firmware and build notes.
 
-**Status: rev A, ordered but not yet built or tested.** Read [Known limitations](#known-limitations--to-verify-before-ordering) before ordering.
+**Status: rev A, ordered but not yet built or tested.** See [Known limitations](#known-limitations--to-verify-before-ordering).
 
-* [What is this?](#what-is-this)
-* [How it works](#how-it-works)
-* [What you need](#what-you-need)
-* [Build guide](#build-guide)
-* [Calibration](#calibration)
-* [Entities in Home Assistant](#entities-in-home-assistant)
-* [Troubleshooting](#troubleshooting)
-* [Board reference](#board-reference) (connectors, GPIO map, jumpers, ordering)
-* [Sensors and extensions](#sensors-and-extensions)
+## The sensor
 
-## What is this?
+The RC-SPC1KA (Radiocontrolli, around 13 EUR at Novaut or TME) is a sealed capacitive rain sensor. There is no exposed metal, so nothing corrodes, and it has two extras: a heater (about 42 ohm, roughly 3.4 W at 12 V) and an NTC (1 kOhm at 25 C) for the surface temperature. Dry it measures about 100 pF; a soaked surface reads several thousand pF.
 
-Cheap rain sensors are a plate of exposed copper traces that detect water by conductivity. They corrode within a season and stay "wet" long after the rain has stopped.
-
-The **RC-SPC1KA** (by Radiocontrolli, roughly 13 EUR from distributors such as Novaut or TME) is different. It is a sealed **capacitive** sensor: no exposed metal, so nothing to corrode. Water on its surface changes its capacitance. It also has a **built-in heater** (about 42 ohm, so roughly 3.4 W at 12 V) that dries the surface after rain, and an **NTC thermistor** (1 kOhm at 25 C) that measures the surface temperature.
-
-The sensor is only the element. It needs electronics to read the capacitance, a 12 V supply for the heater, and software that decides what the readings mean. This project provides all three:
-
-* **Board:** 5 V in, generates the 12 V for the heater, ESP32 on board, reads the sensor.
-* **Firmware:** ESPHome configuration that reports rain, dew, drizzle and dry, and runs the heater safely.
-* **Guide:** this document, written for people who have never used the sensor.
-
-You do not need to know the sensor beforehand. You do need to be able to solder screw terminals and pin headers and to flash an ESP32 over a USB-UART adapter.
+It is only the element, so this project adds the rest: a board that reads it and powers the heater from 5 V, and firmware that turns the raw readings into rain / dew / drizzle / dry and runs the heater safely.
 
 ## How it works
 
-**Measuring wetness.** The sensor's capacitance (about 100 pF dry, well over 1000 pF when soaked) is part of a relaxation oscillator built from an SN74HC14 Schmitt-trigger inverter and a 1 MOhm resistor. The wetter the surface, the larger the capacitance and the **lower the oscillator frequency**. The ESP32 counts the pulses with its hardware pulse counter (PCNT), which is far less noisy than counting in software.
+**Measurement.** The sensor capacitance sits in a relaxation oscillator (SN74HC14, 1 MOhm). Wetter surface, larger capacitance, lower frequency. The ESP32 counts the pulses with the hardware PCNT peripheral, which is much quieter than software counting. You measure the frequency of your own dry sensor once and enter it as *Trockenfrequenz*; that value defines 100 pF and everything else is scaled to it (`C = f_dry * 100 / f`). Cable length and layout drop out of the calibration, so keep the cable as it was when you calibrated.
 
-The firmware does not need any capacitance formula from the datasheet. You measure the frequency of your own dry sensor once and enter it as *Trockenfrequenz* ("dry frequency"); that value is defined as 100 pF, and every other reading is scaled from it: `C = dry_frequency * 100 / f`. Cable length and the layout are calibrated out this way, so keep the cable length the same after calibrating.
+**Rain or dew.** Capacitance says how wet, not why: heavy dew reaches the same values as light rain, and the sensor also reacts to humid air before any liquid water is there (a reversible adsorbed film). The firmware adds two criteria:
 
-**Telling rain from dew.** Capacitance alone says *how wet*, not *why*. Heavy dew can reach the same capacitance as light rain, and the sensor even reacts to very humid air before any liquid water is present (a thin adsorbed film raises the reading, and it is fully reversible). The firmware therefore also looks at:
+* rate of rise (rain: hundreds of pF/min, condensation: a few pF/min)
+* dew point: with outdoor temperature and humidity from Home Assistant it checks whether the surface is at or below the dew point. Without them it falls back to "surface clearly colder than the enclosure air, and dark".
 
-* **How fast the reading rises** (rain: hundreds of pF per minute; condensation: a few pF per minute).
-* **The dew point:** if you provide outdoor temperature and humidity from Home Assistant, it computes the dew point and checks whether the sensor surface is at or below it (water condenses). Without outdoor data it falls back to "surface much colder than the enclosure air and dark", which is what a clear night looks like.
+Result is the *Wetterlage* text: `trocken`, `Tau`, `Niesel`, `trocknet ab`, `Regen`.
 
-The result is the *Wetterlage* ("weather state") text: `trocken` (dry), `Tau` (dew), `Niesel` (drizzle), `trocknet ab` (drying) or `Regen` (rain).
+**Heater.** Wet but not raining hard: heat, so the sensor reports dry soon after the rain stops (and melts snow and frost). Off at 45 C surface temperature, back on below 40 C, checked every second (about 0.7 K/s heating rate). No heating during real rain. Heating time is budgeted (default 15 min, then a 2 h pause) so fog or drizzle cannot keep it running for hours. Implausible NTC readings (open or shorted wire) switch it off. It always starts off after a reset.
 
-**Heating.** When the surface is wet but it is not raining hard, the heater dries it so the sensor reports "dry" soon after the rain ends, and melts snow and frost. The controller:
+**Battery.** Optional night mode: deep sleep with a 5 min wake interval. Off by default.
 
-* switches the heater off at 45 C surface temperature and back on below 40 C (checked every second, the heater warms the surface by about 0.7 K/s),
-* never heats during real rain (it cannot keep up),
-* limits the heating time per period (default: at most 15 minutes, then a 2 hour pause) so fog or drizzle cannot make it run for hours,
-* switches the heater off whenever the temperature reading is implausible (open or shorted NTC wire),
-* always starts with the heater off after a reset.
+## Parts
 
-**Battery operation.** An optional night mode puts the ESP32 into deep sleep and wakes it every 5 minutes to measure. It is off by default and meant for battery or solar setups.
+* This board, assembled by JLCPCB (see [Ordering](#ordering-jlcpcb)); the screw terminals and pin headers are hand-soldered.
+* RC-SPC1KA.
+* 5 V supply, 1.5 A or more. The heater draws about 0.8 A at 5 V (my estimate from 3.4 W plus boost losses, not measured). Developed with the Waveshare Solar Power Manager (D).
+* USB-UART adapter, 3.3 V logic, for the first flash. Updates go over WiFi.
+* Optional: VEML7700 (I2C, 0x10), HTU21D (GY-21) inside the enclosure.
+* Cable to the sensor head (the prototype uses 8-core), IP67 enclosure with desiccant. Keep metal and walls away from the antenna at the board's top edge.
 
-## What you need
+## Build
 
-| Item | Notes |
-|---|---|
-| Carrier board (this repo) | Order it assembled, see [Ordering](#ordering-jlcpcb). |
-| RC-SPC1KA | Six pins or wires, see the wiring table. |
-| 5 V supply, at least 1.5 A | USB charger, or a solar power manager with a 5 V output (developed with the Waveshare Solar Power Manager (D)). The 12 V boost for the heater draws about 0.8 A at 5 V while heating. |
-| Screw terminals, pin headers | Not assembled by JLCPCB: 3x 3-pole and 1x 4-pole screw terminal (Phoenix PT 1,5 style, 3.5 mm pitch), a 1x5 and a 1x8 pin header, a 1x4 socket. See [Ordering](#ordering-jlcpcb). |
-| USB-UART adapter (3.3 V logic) | For the first flash. Later updates go over WiFi (OTA). |
-| Optional: VEML7700 light sensor | I2C, address 0x10. |
-| Optional: HTU21D (GY-21) | I2C, sits inside the enclosure. Measures enclosure temperature and humidity (a desiccant bag check). |
-| Cable to the sensor head | Multi-core, at least 6 wires plus 4 more for the I2C sensor (the prototype uses an 8-core cable). |
-| Enclosure | IP67 for outdoor use, with a desiccant bag. Keep metal and enclosure walls away from the ESP32 antenna at the board's top edge. |
+**Wiring.** The wire colors are from the sensor I used; verify with a meter (heater about 42 ohm between pins 2 and 5, NTC about 1 kOhm between 3 and 4, capacitor pins 1 and 6 isolated from the rest). The silkscreen prints the sensor pin numbers (`#6`, `#1+4`, ...) at the terminals.
 
-## Build guide
-
-### 1. Order and solder the board
-
-Follow [Ordering](#ordering-jlcpcb). When the assembled boards arrive, solder the through-hole parts by hand: the four screw terminals, the pin headers and the HTU21D socket. Then check visually for solder bridges.
-
-### 2. Mount the sensor head
-
-The RC-SPC1KA and the VEML7700 typically sit together in a small holder (a 3D-printed ASA holder on a bracket, sensor glued in with a transparent MS-polymer adhesive, the back with the heater and NTC contacts covered with Kapton tape). Mount it where rain reaches it and water can run off. The prototype sits in a shaded spot on a balcony.
-
-### 3. Wire the sensor
-
-The RC-SPC1KA has six pins. The wire colors below are from the sensor I used; check yours with a multimeter against the function column (heater about 42 ohm between pins 2 and 5, NTC about 1 kOhm at room temperature between pins 3 and 4, capacitor pins 1 and 6 are isolated from the others).
-
-| Sensor pin | Wire | Function | Board terminal |
+| Sensor pin | Wire | Function | Terminal |
 |---|---|---|---|
-| 6 | green | capacitor, oscillator node | SENSOR **OSC** |
-| 1 | white | capacitor, ground side | SENSOR **GND** |
-| 4 | pink | NTC | SENSOR **GND** |
-| 3 | red | NTC | SENSOR **NTC** |
-| 2 | black | heater, switched ground | HEATER **HEAT-** |
-| 5 | red | heater, +12 V | HEATER **12V** |
+| 6 | green | capacitor, oscillator node | SENSOR OSC |
+| 1 | white | capacitor, ground side / outer electrode | SENSOR GND |
+| 4 | pink | NTC | SENSOR GND |
+| 3 | red | NTC | SENSOR NTC |
+| 2 | black | heater, switched ground | HEATER HEAT- |
+| 5 | red | heater, +12 V | HEATER 12V |
 
-The board silkscreen prints the sensor's pin numbers (`#6`, `#1+4`, `#3`, `#2`, `#5`) next to each terminal, so you can wire it without this table.
+OSC must never touch 12 V. VEML7700 on the I2C terminal or Qwiic, HTU21D in the socket labelled HTU21D. Power on POWER IN (5V, GND; reverse-polarity protected). BAT is only for battery-voltage monitoring (1S Li-ion, up to 4.2 V through the 100k/100k divider); leave it open otherwise.
 
-Two rules that matter:
-
-* **Never connect OSC to 12 V** and never bridge the heater wires to the capacitor wires. The heater and the capacitor are electrically isolated inside the sensor, keep it that way.
-* Pin 1 and pin 4 both go to GND. Pin 1 is also the outer electrode, so a solid ground connection there reduces noise.
-
-The optional VEML7700 goes to the I2C terminal (3V3, GND, SDA, SCL), or plug it in through Qwiic. The HTU21D goes into the 1x4 socket labelled HTU21D.
-
-### 4. Power
-
-Connect 5 V and GND to the POWER IN terminal (pins 5V and GND). The board has reverse-polarity protection. The third pin, BAT, is only for battery-voltage monitoring: connect it to the battery plus of a supply that has a 1S Li-ion battery (up to 4.2 V) and leave it open otherwise.
-
-### 5. Flash the firmware
-
-The board has no USB port. Use a USB-UART adapter with **3.3 V** logic:
-
-| Adapter | UART header J7 |
-|---|---|
-| GND | GND |
-| RX | TX |
-| TX | RX |
-
-The header has no power pin: power the board through POWER IN while flashing (share GND with the adapter).
-
-1. Install ESPHome (a current release; the configuration validates with ESPHome 2026.6.5).
-2. Copy `firmware/regensensor.yaml` next to a `secrets.yaml` containing `wifi_ssid`, `wifi_password`, `regensensor_api_key` (generate one in the ESPHome dashboard) and `regensensor_ota_password`.
-3. In the `substitutions` at the top, set `aussen_temp_entity` and `aussen_feuchte_entity` to your outdoor temperature and humidity entities in Home Assistant. If they do not exist, the sensors stay empty and the firmware falls back to the undercooling method.
-4. Hold the **BOOT** button, tap **RESET**, release BOOT. The ESP32 is now in flash mode. Run `esphome run regensensor.yaml` and pick the serial port.
-5. Home Assistant discovers the device. Later updates work over WiFi.
+**Flashing.** No USB port on the board; use the UART header J7 (adapter RX to TX, TX to RX, GND to GND) and power the board through POWER IN, since J7 has no power pin. Hold BOOT, tap RESET, release BOOT, then `esphome run firmware/regensensor.yaml`. The config validates with ESPHome 2026.6.5. It needs `secrets.yaml` with `wifi_ssid`, `wifi_password`, `regensensor_api_key`, `regensensor_ota_password`. Set `aussen_temp_entity` and `aussen_feuchte_entity` in the substitutions to your outdoor sensors; if they do not exist the sensors stay empty and the fallback applies.
 
 ## Calibration
 
-Do these once, in this order.
-
-1. **Dry frequency.** Make sure the sensor surface is completely dry and the heater is off. Watch the *Frequenz* entity for a few minutes, take the mean, and enter it in *Trockenfrequenz*. Now *Kapazität* reads about 100 pF when dry. The default in the YAML (13549 Hz) is only a placeholder from the vendor's example, not from your build.
-2. **Temperature (NTC).** Put a reference thermometer next to the sensor head, in the same air, no direct sun and no clear night sky, heater off for at least 30 minutes. Compare, then adjust `adc_faktor` (coarse) or the *NTC Offset* entity (fine, +-5 K) until the readings agree. Do not calibrate to air temperature under a clear night sky: the plate is correctly colder than the air then, and that is the dew signal.
-3. **Thresholds.** Start with the defaults (display 300 pF, heat 380 pF, rain 650 pF; the datasheet table suggests 320 / 450 / 2000 pF). Then do a wet test: wet the surface completely, let it dry, and note the capacitances. A soaked sensor reads several thousand pF. Set the thresholds from your own values with the number entities, no reflash needed.
-4. **Watch a humid night before trusting it.** Note the highest capacitance in a dry but humid night (entity *Abstand zum Taupunkt* helps) and keep the thresholds above it. Otherwise every foggy night is reported as wet.
-5. **Automatic mode.** Consider leaving *Automatikbetrieb* off for the first night so that you can see the raw values undisturbed by the heater.
+1. **Dry frequency.** Surface dry, heater off. Average *Frequenz* over a few minutes and enter it as *Trockenfrequenz*. The default in the YAML (13549 Hz) is a placeholder from the vendor example.
+2. **NTC.** Reference thermometer next to the head, same air, no sun, heater off for 30 min. Trim with `adc_faktor` (coarse) or *NTC Offset* (fine, +-5 K). Do not calibrate against air temperature under a clear night sky: the plate is legitimately colder, that is the dew signal.
+3. **Thresholds.** Start values: display 300 pF, heat 380 pF, rain 650 pF (the datasheet table gives 320 / 450 / 2000). Run a wet test and set your own via the number entities; no reflash.
+4. **Humid nights.** Note the maximum capacitance in a dry but humid night and keep the thresholds above it (*Abstand zum Taupunkt* helps), otherwise every fog reads as wet.
+5. Leave *Automatikbetrieb* off the first night to see the raw values without heater influence.
 
 ## Entities in Home Assistant
 
-The entity names are German (the firmware started as a private project); they are kept so existing dashboards keep working.
+Names are German (the firmware began as a private project); kept for compatibility.
 
 | Entity | Meaning |
 |---|---|
-| Wetterlage | Weather state: trocken, Tau, Niesel, trocknet ab, Regen |
-| Regen, Feucht | Binary sensors (rain, wet) |
-| Kapazität, Benetzung | Capacitance in pF, and wetting in percent |
-| Oberflächentemperatur | Sensor surface temperature |
-| Taupunkt, Abstand zum Taupunkt | Outdoor dew point and how far the surface is above it |
-| Heizung | Heater switch (also usable by hand) |
-| Automatikbetrieb | Master switch for automatic heating and night mode |
-| Nachtmodus | Allows deep sleep in the night window (off by default) |
-| Heizsperre aktiv, Heizkonto, Sperre verbleibend | State of the heating-time limit |
-| Trockenfrequenz, Anzeige-/Feuchtigkeits-/Regenschwelle, ... | Calibration and settings, changeable at runtime |
-| Helligkeit, Sonneneinstrahlung, Box Temperatur/Luftfeuchte, Batteriespannung | Optional sensors |
+| Wetterlage | trocken, Tau, Niesel, trocknet ab, Regen |
+| Regen, Feucht | binary sensors |
+| Kapazität, Benetzung | capacitance in pF, wetting in % |
+| Oberflächentemperatur | sensor surface temperature |
+| Taupunkt, Abstand zum Taupunkt | outdoor dew point, surface minus dew point |
+| Heizung, Automatikbetrieb | heater switch, master switch for automatic heating and night mode |
+| Nachtmodus | allows deep sleep in the night window (off by default) |
+| Heizsperre aktiv, Heizkonto, Sperre verbleibend | heating-time limit |
+| Trockenfrequenz, *-schwelle, ... | calibration and settings, adjustable at runtime |
+| Helligkeit, Sonneneinstrahlung, Box Temperatur/Luftfeuchte, Batteriespannung | optional sensors |
 
-An API action `set_aussenluft(temperatur, feuchte)` lets an automation push outdoor values instead of subscribing to entities.
+The API action `set_aussenluft(temperatur, feuchte)` lets an automation push outdoor values instead of subscribing to entities.
 
 ## Troubleshooting
 
-| Symptom | Likely cause |
+| Symptom | Cause |
 |---|---|
-| *Kapazität* unknown / NaN | *Trockenfrequenz* not set, or no oscillator signal (see next line). |
-| *Frequenz* is 0 | The oscillator does not run: check the OSC wire, GND, and that the sensor face is not soaked. A stopped oscillator is reported as "wet". |
-| *Frequenz* jumps around | I2C traffic crosstalk (already median-filtered), poor GND connection of sensor pin 1, or a very long cable. |
-| Oberflächentemperatur is NaN and the heater never runs | NTC wire open or shorted (implausible resistance): check the SENSOR terminal. This is deliberate, the heater stays off. |
-| Every humid night reads "wet" or "Tau" | Thresholds too low, see calibration step 4. |
-| Heater switches off after 15 minutes | The heating limit (*Max. Heizdauer*) for fog and drizzle. It resumes after *Heizpause*. |
-| Cannot flash | Use 3.3 V UART, cross RX and TX, hold BOOT while tapping RESET, power the board through POWER IN. |
-| Device never comes back after night mode | Night mode needs a valid clock and a supply that does not switch off at low load. Turn *Nachtmodus* off to keep it awake. |
+| Kapazität unknown | *Trockenfrequenz* not set, or no oscillator signal |
+| Frequenz 0 | Oscillator stopped: OSC wire, GND, soaked surface. Reported as wet. |
+| Frequenz jumps | I2C crosstalk (median-filtered already), weak GND at sensor pin 1, very long cable |
+| Surface temperature NaN, heater never runs | Implausible NTC resistance (open or shorted): check the SENSOR terminal. Deliberate, the heater stays off. |
+| Humid nights read wet or Tau | Thresholds too low, calibration step 4 |
+| Heater stops after 15 min | Heating limit (*Max. Heizdauer*); resumes after *Heizpause* |
+| Does not wake after night mode | Needs a valid clock and a supply that stays on at low load; switch *Nachtmodus* off to keep it awake |
 
 ## Board reference
 
