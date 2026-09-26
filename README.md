@@ -1,12 +1,42 @@
 # ESPHome Capacitive Rain Sensor (RC-SPC1KA + ESP32)
 
-Heated capacitive rain sensor for Home Assistant that can grow into a small weather station: KiCad carrier board (orderable assembled from JLCPCB), ESPHome firmware and build notes.
+A rain sensor for Home Assistant that reacts to the first drops, knows the difference between rain and morning dew, and is dry again soon after the shower.
 
-**Status: rev A, ordered but not yet built or tested.** See [Known limitations](#known-limitations).
+## Why build this
+
+Most cheap rain sensors are either simple contact grids that corrode within a season, or tipping buckets that only report after a measurable amount of water has fallen. Zigbee and Wi-Fi rain sensors from the shop are usually a black box: you get "rain: yes/no" and no way to fix it when it reports dew as rain every morning.
+
+This one is different:
+
+* **Sealed capacitive element.** No exposed metal, so nothing corrodes, and it reacts to a few drops rather than to a bucketful.
+* **Heated.** After the rain stops the heater dries the surface, so the sensor reports "dry" within minutes instead of staying wet for hours. It also melts snow and frost.
+* **Knows what it measures.** Rate of rise and dew point separate rain from dew, fog and humid air, which is where simple sensors give false alarms.
+* **Yours to change.** Open hardware, open firmware, everything visible in one ESPHome YAML. Thresholds, heater limits and night mode are adjustable in Home Assistant without reflashing.
+
+## What you can do with it
+
+* Get a notification when it starts to rain, before the laundry on the balcony is wet.
+* Close roof windows, skylights, awnings or a pergola roof automatically, and open them again when it is dry.
+* Switch on a light when heavy rain makes the room dark.
+* Pause irrigation while it is raining or right after.
+* Log how long and how often it rained, and react to frost or snow on the sensor.
+* Add a light sensor, temperature and humidity, pressure, UV or wind on the same board and turn it into a small weather station.
+
+## What is in this repository
+
+* **Board.** An ESP32 carrier board (72 x 56 mm, 2 layers) that reads the sensor and runs its 12 V heater from a plain 5 V supply. Orderable fully assembled from JLCPCB; you solder only the screw terminals and headers.
+* **Firmware.** The ESPHome configuration: weather state (dry, dew, drizzle, drying, rain), safe heater control, optional night mode, battery monitoring.
+* **Build notes.** Wiring, calibration, a 3D-printable sensor holder, troubleshooting.
 
 ![Rev A board, 3D view](docs/board-3d.png)
 
 *Rev A, 72 x 56 mm, KiCad 3D view. The magenta dots mark pin 1 (as in the JLCPCB preview).*
+
+The board has an I2C bus (Qwiic connector, socket and screw terminal) and an 8-pin expansion header. A light sensor (VEML7700), temperature and humidity in the enclosure (HTU21D) and a battery monitor are supported by the firmware. Pressure, UV, wind and a rain gauge work on the same hardware, but the firmware for them is not written yet.
+
+## Status
+
+Rev A, ordered but not yet built or tested. See [Known limitations](#known-limitations).
 
 ## The sensor
 
