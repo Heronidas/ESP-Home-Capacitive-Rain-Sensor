@@ -4,9 +4,9 @@ Heated capacitive rain sensor for Home Assistant that can grow into a small weat
 
 **Status: rev A, ordered but not yet built or tested.** See [Known limitations](#known-limitations).
 
-![Board layout, top and bottom](docs/board-render.png)
+![Rev A board, 3D view](docs/board-3d.png)
 
-*Rev A, 72 x 56 mm. Left: top side (copper, pads, silkscreen; the ESP32 module is shown as an outline). Right: bottom copper, seen from below.*
+*Rev A, 72 x 56 mm, KiCad 3D view. The magenta dots mark pin 1 (as in the JLCPCB preview).*
 
 ## The sensor
 
