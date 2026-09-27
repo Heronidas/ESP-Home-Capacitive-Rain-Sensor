@@ -32,7 +32,7 @@ This one is different:
 ## What is in this repository
 
 * **Board.** An ESP32 carrier board (72 x 56 mm, 2 layers) that reads the sensor and runs its 12 V heater from a plain 5 V supply. Orderable fully assembled from JLCPCB; you solder only the screw terminals and headers.
-* **Firmware.** The ESPHome configuration: weather state (dry, dew, drizzle, drying, rain), safe heater control, optional night mode, battery monitoring.
+* **Firmware.** The ESPHome configuration: weather state (dry, humid, wet, dew, frost, drizzle, rain), safe heater control, optional night mode, battery monitoring.
 * **Build notes.** Wiring, calibration, a 3D-printable sensor holder, troubleshooting.
 
 ![Rev A board, 3D view](docs/board-3d.png)
@@ -43,7 +43,7 @@ The board has an I2C bus (Qwiic connector, socket and screw terminal) and an 8-p
 
 ## Status
 
-Rev A, ordered but not yet built or tested. See [Known limitations](#known-limitations).
+The firmware runs on a perfboard prototype (ESP32 dev board, same pins). The Rev A board is ordered but not yet built or tested. See [Known limitations](#known-limitations).
 
 ## The sensor
 
@@ -62,7 +62,7 @@ It is only the element, so this project adds the rest: a board that reads it and
 * rate of rise (rain: hundreds of pF/min, condensation: a few pF/min)
 * dew point: with outdoor temperature and humidity from Home Assistant it checks whether the surface is at or below the dew point (frost point below 0 °C). Without them it falls back to "surface clearly colder than the enclosure air, and dark".
 
-Result is the *Wetterlage* text: `trocken`, `feucht`, `nass`, `Tau`, `Reif`, `Niesel`, `Regen`. Fog (`Nebel`) is prepared in the YAML as commented-out code, untested.
+Result is the *Wetterlage* text: `trocken`, `feucht`, `nass`, `Tau`, `Reif`, `Niesel`, `Regen`. Dew reads `Morgentau` from 4 to 11 h and `Abendtau` from 17 to 23 h. Every threshold has a small hysteresis so the text does not flicker at a limit. Fog (`Nebel`) is prepared in the YAML as commented-out code, untested.
 
 **Heater.** Wet but not raining hard: heat, so the sensor reports dry soon after the rain stops (and melts snow and frost). Off at 45 C surface temperature, back on below 40 C, checked every second (about 0.7 K/s heating rate). No heating during real rain. Heating time is budgeted (default 15 min, then a 2 h pause) so fog or drizzle cannot keep it running for hours. Implausible NTC readings (open or shorted wire) switch it off. It always starts off after a reset.
 
@@ -94,7 +94,7 @@ The sensor has three isolated groups: capacitor (1, 6), heater (2, 5, about 42 o
 
 OSC must never touch 12 V. VEML7700 on the I2C terminal or Qwiic, HTU21D in the socket labelled HTU21D. Power on POWER IN (5V, GND; reverse-polarity protected). BAT is only for battery-voltage monitoring (1S Li-ion, up to 4.2 V through the 100k/100k divider); leave it open otherwise.
 
-**Flashing.** No USB port on the board; use the UART header J7 (adapter RX to TX, TX to RX, GND to GND) and power the board through POWER IN, since J7 has no power pin. Hold BOOT, tap RESET, release BOOT, then `esphome run firmware/regensensor.yaml`. The config validates with ESPHome 2026.6.5. It needs `secrets.yaml` with `wifi_ssid`, `wifi_password`, `regensensor_api_key`, `regensensor_ota_password`. Set `aussen_temp_entity` and `aussen_feuchte_entity` in the substitutions to your outdoor sensors; if they do not exist the sensors stay empty and the fallback applies.
+**Flashing.** No USB port on the board; use the UART header J7 (adapter RX to TX, TX to RX, GND to GND) and power the board through POWER IN, since J7 has no power pin. Hold BOOT, tap RESET, release BOOT, then `esphome run firmware/regensensor.yaml`. The config builds with ESPHome 2026.9. It needs `secrets.yaml` with `wifi_ssid`, `wifi_password`, `regensensor_api_key`, `regensensor_ota_password`. Set `aussen_temp_entity` and `aussen_feuchte_entity` in the substitutions to your outdoor sensors; if they do not exist the sensors stay empty and the fallback applies.
 
 ## Building without the PCB
 
@@ -164,8 +164,9 @@ Notes:
 1. **Dry frequency.** Surface dry, heater off. Average *Frequenz* over a few minutes and enter it as *Trockenfrequenz*. The default in the YAML (13549 Hz) is a placeholder from the vendor example.
 2. **NTC.** Reference thermometer next to the head, same air, no sun, heater off for 30 min. Trim with `adc_faktor` (coarse) or *NTC Offset* (fine, +-5 K). Do not calibrate against air temperature under a clear night sky: the plate is legitimately colder, that is the dew signal.
 3. **Thresholds.** Start values: display 300 pF, heat 380 pF, rain 650 pF (the datasheet table gives 320 / 450 / 2000). Adjust them via the number entities; no reflash.
-4. **Humid nights.** Note the maximum capacitance in a dry but humid night and keep the thresholds above it (*Abstand zum Taupunkt* helps), otherwise every fog reads as wet.
-5. Leave *Automatikbetrieb* off the first night to see the raw values without heater influence.
+4. **Dew threshold.** *Tauschwelle* (default 2 K) is the surface-minus-dew-point distance from which the state reads dew. Outdoor sensor and plate sit in different places, so tune it on real dew mornings.
+5. **Humid nights.** Note the maximum capacitance in a dry but humid night and keep the thresholds above it (*Abstand zum Taupunkt* helps), otherwise every fog reads as wet.
+6. Leave *Automatikbetrieb* off the first night to see the raw values without heater influence.
 
 ## Entities in Home Assistant
 
@@ -175,7 +176,7 @@ Names are German (the firmware began as a private project); kept for compatibili
 |---|---|
 | Wetterlage | trocken, feucht, nass, Tau (Morgentau, Abendtau), Reif, Niesel, Regen |
 | Regen, Feucht | binary sensors |
-| Kapazität, Benetzung | capacitance in pF, wetting in % |
+| Kapazität, Kapazität Änderungsrate, Benetzung | capacitance in pF, rate of change in pF/min (1 min mean), wetting in % |
 | Oberflächentemperatur | sensor surface temperature |
 | Taupunkt, Abstand zum Taupunkt | outdoor dew point, surface minus dew point |
 | Tauschwelle | distance to the dew point from which the state shows dew (default 2 K) |
@@ -190,7 +191,7 @@ Names are German (the firmware began as a private project); kept for compatibili
 Two ways, both optional. Without outdoor data the firmware uses the fallback (surface colder than the enclosure air, and dark).
 
 * **Substitutions.** Set `aussen_temp_entity` and `aussen_feuchte_entity` in the YAML. Works, but Home Assistant can take up to a minute to deliver the values after boot, so it does not help in night mode (the device is awake for about 35 s).
-* **Blueprint.** `blueprints/regensensor_aussenluft.yaml`: pick your outdoor sensors in the UI (trigger sensor: *NTC Widerstand* of the Regensensor); it pushes them through the `set_aussenluft(temperatur, feuchte)` action on the first reading after each wake-up. Copy the file to `config/blueprints/automation/` (or import it from the GitHub URL) and create an automation from it. Not yet tested.
+* **Blueprint.** `blueprints/regensensor_aussenluft.yaml`: pick your outdoor sensors in the UI (trigger sensor: *NTC Widerstand* of the Regensensor); it pushes them through the `set_aussenluft(temperatur, feuchte)` action on the first reading after each wake-up. Copy the file to `config/blueprints/automation/` (or import it from the GitHub URL) and create an automation from it. Tested: the dew point is available about 12 s after wake-up. While the device is awake all day it simply pushes about every 40 s.
 
 ## Troubleshooting
 
@@ -200,7 +201,7 @@ Two ways, both optional. Without outdoor data the firmware uses the fallback (su
 | Frequenz 0 | Oscillator stopped: OSC wire, GND, soaked surface. Reported as wet. |
 | Frequenz jumps | I2C crosstalk (median-filtered already), weak GND at sensor pin 1, very long cable |
 | Surface temperature NaN, heater never runs | Implausible NTC resistance (open or shorted): check the SENSOR terminal. Deliberate, the heater stays off. |
-| Humid nights read wet or Tau | Thresholds too low, calibration step 4 |
+| Humid nights read wet or Tau | Thresholds too low (calibration step 5), or *Tauschwelle* too high |
 | Heater stops after 15 min | Heating limit (*Max. Heizdauer*); resumes after *Heizpause* |
 | Does not wake after night mode | Needs a valid clock and a supply that stays on at low load; switch *Nachtmodus* off to keep it awake |
 
