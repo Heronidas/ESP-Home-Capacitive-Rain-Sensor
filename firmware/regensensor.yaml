@@ -40,6 +40,12 @@ substitutions:
   rate_waechst: "60"
   rate_regen: "150"
 
+  # Hysteresis against flicker at thresholds: capacitance states fall back
+  # below 95 % of their threshold, dew 0.5 K above its threshold, drizzle
+  # below 2/3 of the rate threshold.
+  hyst_faktor: "0.95"
+  hyst_tau: "0.5"        # K
+
   # Dew fallback without outdoor data: surface colder than air and dark.
   unterkuehlung: "-1.0"  # K
   lux_nacht: "5"         # lx
@@ -171,10 +177,21 @@ globals:
     restore_value: true
     initial_value: '0'
 
-  # Dew state of the weather text, for hysteresis against flicker.
+  # Held states behind the hysteresis (see hyst_* above).
   - id: g_tau
     type: bool
     restore_value: true
+    initial_value: 'false'
+  - id: g_anz          # capacitance at or above the display threshold
+    type: bool
+    restore_value: true
+    initial_value: 'false'
+  - id: g_feucht       # capacitance at or above the heating threshold
+    type: bool
+    restore_value: true
+    initial_value: 'false'
+  - id: g_niesel
+    type: bool
     initial_value: 'false'
 
   # Last known "inside night window", fallback when the clock is missing.
@@ -671,10 +688,8 @@ binary_sensor:
     device_class: moisture
     entity_category: diagnostic
     lambda: |-
-      float c = id(kapazitaet).state;
-      float s = id(schwelle_feucht).state;
-      if (isnan(c) || isnan(s)) return {};
-      return c >= s;
+      if (isnan(id(kapazitaet).state) || isnan(id(schwelle_feucht).state)) return {};
+      return id(g_feucht);
 
   # Follows the rain latch, not the raw threshold: heavy dew reaches the same
   # capacitance as rain.
@@ -753,15 +768,16 @@ text_sensor:
       float ts = id(temp_ruhig).state;
 
       // The rain latch is kept by the control loop, only read here.
-      if (id(g_regen) || c < sa) id(g_tau) = false;
+      id(g_anz) = id(g_anz) ? c >= sa * ${hyst_faktor} : c >= sa;
+      if (id(g_regen) || !id(g_anz)) id(g_tau) = false;
       if (id(g_regen)) return {"Regen"};
-      if (c < sa)      return {"trocken"};
+      if (!id(g_anz))  return {"trocken"};
 
-      // Dew from the threshold down, back only 0.5 K above it (hysteresis).
+      // Dew from the threshold down.
       bool tau = false;
       if (!isnan(dp)) {
         float st = id(schwelle_tau).state;
-        tau = id(g_tau) ? dp <= st + 0.5f : dp <= st;
+        tau = id(g_tau) ? dp <= st + ${hyst_tau} : dp <= st;
       } else {
         // Fallback: much colder than air and dark = radiative cooling.
         float u   = id(unterkuehlung_k).state;
@@ -783,8 +799,9 @@ text_sensor:
       // if (isnan(ta) || isnan(rh)) { ta = id(aussen_temperatur).state; rh = id(aussen_feuchte).state; }
       // if (!isnan(ta) && !isnan(rh) && !isnan(ts) && rh >= 97.0f && fabsf(ts - ta) < 1.0f && (isnan(r) || r < ${rate_waechst})) return {"Nebel"};
 
-      if (!isnan(r) && r > ${rate_waechst}) return {"Niesel"};
-      return c < sf ? std::string("feucht") : std::string("nass");
+      id(g_niesel) = !isnan(r) && r > (id(g_niesel) ? ${rate_waechst} * 0.67f : (float) ${rate_waechst});
+      if (id(g_niesel)) return {"Niesel"};
+      return id(g_feucht) ? std::string("nass") : std::string("feucht");
 
   - platform: version
     name: "ESPHome Version"
@@ -823,6 +840,12 @@ interval:
               id(g_regen) = false;
             }
           }
+
+          // Heating threshold with hysteresis, shared with the state text and
+          // the "Feucht" sensor; runs before any early return.
+          float sfh = id(schwelle_feucht).state;
+          if (!isnan(c) && !isnan(sfh))
+            id(g_feucht) = id(g_feucht) ? c >= sfh * ${hyst_faktor} : c >= sfh;
 
           // 0b) Elapsed time. Account and lockout run in real time: in night
           // mode this loop stalls (35 s awake per 5 min). Without a clock
@@ -874,7 +897,7 @@ interval:
             if (an) id(heizung).turn_off();
             return;
           }
-          bool feucht = c >= sf;
+          bool feucht = id(g_feucht);
           // Latch instead of raw threshold: heat on heavy dew, not on rain.
           bool regen  = id(g_regen);
 
