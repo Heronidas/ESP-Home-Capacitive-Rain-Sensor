@@ -62,7 +62,7 @@ It is only the element, so this project adds the rest: a board that reads it and
 * rate of rise (rain: hundreds of pF/min, condensation: a few pF/min)
 * dew point: with outdoor temperature and humidity from Home Assistant it checks whether the surface is at or below the dew point. Without them it falls back to "surface clearly colder than the enclosure air, and dark".
 
-Result is the *Wetterlage* text: `trocken`, `Tau`, `Niesel`, `trocknet ab`, `Regen`.
+Result is the *Wetterlage* text: `trocken`, `feucht`, `nass`, `Tau`, `Reif`, `Niesel`, `Regen`. Fog (`Nebel`) is prepared in the YAML as commented-out code, untested.
 
 **Heater.** Wet but not raining hard: heat, so the sensor reports dry soon after the rain stops (and melts snow and frost). Off at 45 C surface temperature, back on below 40 C, checked every second (about 0.7 K/s heating rate). No heating during real rain. Heating time is budgeted (default 15 min, then a 2 h pause) so fog or drizzle cannot keep it running for hours. Implausible NTC readings (open or shorted wire) switch it off. It always starts off after a reset.
 
@@ -173,7 +173,7 @@ Names are German (the firmware began as a private project); kept for compatibili
 
 | Entity | Meaning |
 |---|---|
-| Wetterlage | trocken, Tau, Niesel, trocknet ab, Regen |
+| Wetterlage | trocken, feucht, nass, Tau, Reif, Niesel, Regen |
 | Regen, Feucht | binary sensors |
 | Kapazität, Benetzung | capacitance in pF, wetting in % |
 | Oberflächentemperatur | sensor surface temperature |

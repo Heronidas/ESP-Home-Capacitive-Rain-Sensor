@@ -36,8 +36,7 @@ substitutions:
   c_nass_max: "5000.0"   # pF, used when the oscillator stops (0 Hz)
 
   # Classification by rate of change (pF/min): rain ~500-1500, condensation
-  # 2-5, drying <= -100, noise ~+-15.
-  rate_trocknet: "-60"
+  # 2-5, noise ~+-15.
   rate_waechst: "60"
   rate_regen: "150"
 
@@ -696,12 +695,14 @@ switch:
 
 
 text_sensor:
-  # Weather state. Capacitance says how wet, rate and heat balance say why:
-  #   trocken       below the display threshold
-  #   Tau           surface at or below the dew point
-  #   Niesel        film grows, surface above the dew point
-  #   trocknet ab   capacitance falling
-  #   Regen         above the rain threshold, rose fast
+  # Weather state. Capacitance says how wet, dew point and rate say why:
+  #   trocken   below the display threshold
+  #   feucht    thin film, no dew, not growing
+  #   nass      wet surface, not growing (also right after rain)
+  #   Tau       surface at or below the dew point, above 0 C
+  #   Reif      same, at or below 0 C
+  #   Niesel    wet and growing
+  #   Regen     rain latch
   - platform: template
     name: "Wetterlage"
     icon: mdi:weather-partly-rainy
@@ -717,36 +718,30 @@ text_sensor:
 
       float r  = id(kapazitaet_rate).state;
       float dp = id(g_taupunkt_abstand);
+      float ts = id(temp_ruhig).state;
 
       // The rain latch is kept by the control loop, only read here.
       if (id(g_regen)) return {"Regen"};
-      if (c <  sa)     return {"trocken"};
+      if (c < sa)      return {"trocken"};
 
-      // Lower band: thin film, no heating. Above the dew point and not
-      // growing means evaporating dew, not drizzle.
-      if (c < sf) {
-        if (!isnan(r) && r < ${rate_trocknet}) return {"trocknet ab"};
-        if (!isnan(dp)) {
-          if (dp <= 0.5f) return {"Tau"};
-          if (!isnan(r) && r > ${rate_waechst}) return {"Niesel"};
-          return {"trocknet ab"};
-        }
-        // Without a dew point fall through to the fallback below.
+      bool tau = !isnan(dp) && dp <= 0.5f;
+      if (isnan(dp)) {
+        // Fallback: much colder than air and dark = radiative cooling.
+        float u   = id(unterkuehlung_k).state;
+        float lux = id(helligkeit).state;
+        tau = !isnan(u) && u < ${unterkuehlung} && !isnan(lux) && lux < ${lux_nacht};
       }
+      if (tau) return (!isnan(ts) && ts <= 0.0f) ? std::string("Reif")
+                                                 : std::string("Tau");
 
-      // Upper band, between heating and rain threshold.
-      if (!isnan(r) && r < ${rate_trocknet}) return {"trocknet ab"};
+      // Fog (untested, off): saturated outdoor air, surface near air temperature.
+      // float ta = NAN, rh = NAN;
+      // if (id(g_push_stamp) != 0 && (millis() - id(g_push_stamp)) < ${aussen_gueltig_ms}) { ta = id(g_push_temp); rh = id(g_push_rh); }
+      // if (isnan(ta) || isnan(rh)) { ta = id(aussen_temperatur).state; rh = id(aussen_feuchte).state; }
+      // if (!isnan(ta) && !isnan(rh) && !isnan(ts) && rh >= 97.0f && fabsf(ts - ta) < 1.0f && (isnan(r) || r < ${rate_waechst})) return {"Nebel"};
 
-      if (!isnan(dp)) return dp <= 0.5f ? std::string("Tau")
-                                        : std::string("Niesel");
-
-      // Fallback: much colder than air and dark = radiative cooling, dew.
-      float u   = id(unterkuehlung_k).state;
-      float lux = id(helligkeit).state;
-      bool kalt    = !isnan(u)   && u   <  ${unterkuehlung};
-      bool dunkel  = !isnan(lux) && lux <  ${lux_nacht};
-      if (kalt && dunkel) return {"Tau"};
-      return {"Niesel"};
+      if (!isnan(r) && r > ${rate_waechst}) return {"Niesel"};
+      return c < sf ? std::string("feucht") : std::string("nass");
 
   - platform: version
     name: "ESPHome Version"
