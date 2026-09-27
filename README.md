@@ -60,7 +60,7 @@ It is only the element, so this project adds the rest: a board that reads it and
 **Rain or dew.** Capacitance says how wet, not why: heavy dew reaches the same values as light rain, and the sensor also reacts to humid air before any liquid water is there (a reversible adsorbed film). The firmware adds two criteria:
 
 * rate of rise (rain: hundreds of pF/min, condensation: a few pF/min)
-* dew point: with outdoor temperature and humidity from Home Assistant it checks whether the surface is at or below the dew point. Without them it falls back to "surface clearly colder than the enclosure air, and dark".
+* dew point: with outdoor temperature and humidity from Home Assistant it checks whether the surface is at or below the dew point (frost point below 0 °C). Without them it falls back to "surface clearly colder than the enclosure air, and dark".
 
 Result is the *Wetterlage* text: `trocken`, `feucht`, `nass`, `Tau`, `Reif`, `Niesel`, `Regen`. Fog (`Nebel`) is prepared in the YAML as commented-out code, untested.
 

@@ -342,7 +342,7 @@ number:
 
 
 sensor:
-  # I2C sensors at 8 s so they report within the 25 s night-mode wake time.
+  # I2C sensors at 8 s so they report within the 35 s night-mode wake time.
   - platform: veml7700
     address: 0x10
     update_interval: 8s
@@ -565,6 +565,11 @@ sensor:
     state_class: measurement
     accuracy_decimals: 0
     update_interval: never
+    filters:
+      # One raw value per 10 s; 1 min mean (noise ~+-20 -> ~+-8).
+      - sliding_window_moving_average:
+          window_size: 6
+          send_every: 1
 
   - platform: template
     name: "Heizkonto"
@@ -624,7 +629,8 @@ sensor:
       float a = logf(rh / 100.0f) + (17.62f * t) / (243.12f + t);
       return 243.12f * a / (17.62f - a);
 
-  # Surface minus dew point: at or below zero, water condenses.
+  # Surface minus dew point: at or below zero, water condenses. Below 0 C on
+  # the surface the frost point (Magnus over ice) is used, up to ~1 K higher.
   - platform: template
     name: "Abstand zum Taupunkt"
     entity_category: diagnostic
@@ -635,6 +641,10 @@ sensor:
     lambda: |-
       float ts = id(temp_ruhig).state;
       float td = id(taupunkt).state;
+      if (!isnan(ts) && !isnan(td) && ts <= 0.0f && td < 0.0f) {
+        float g = 17.62f * td / (243.12f + td);
+        td = 272.62f * g / (22.46f - g);
+      }
       float d = (isnan(ts) || isnan(td)) ? NAN : (ts - td);
       id(g_taupunkt_abstand) = d;
       return d;
@@ -803,7 +813,7 @@ interval:
           }
 
           // 0b) Elapsed time. Account and lockout run in real time: in night
-          // mode this loop stalls (25 s awake per 5 min). Without a clock
+          // mode this loop stalls (35 s awake per 5 min). Without a clock
           // it falls back to one second per run.
           float dt = 1.0f;
           auto  jz = id(uhr).now();
