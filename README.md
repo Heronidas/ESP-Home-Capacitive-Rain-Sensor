@@ -178,6 +178,7 @@ Names are German (the firmware began as a private project); kept for compatibili
 | Kapazität, Benetzung | capacitance in pF, wetting in % |
 | Oberflächentemperatur | sensor surface temperature |
 | Taupunkt, Abstand zum Taupunkt | outdoor dew point, surface minus dew point |
+| Tauschwelle | distance to the dew point from which the state shows dew (default 2 K) |
 | Heizung, Automatikbetrieb | heater switch, master switch for automatic heating and night mode |
 | Nachtmodus, Nachtmodus von/bis | allows deep sleep in the night window (off by default); window in half hours, e.g. 22.5 = 22:30 |
 | Heizsperre aktiv, Heizkonto, Sperre verbleibend | heating-time limit |
