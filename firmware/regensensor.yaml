@@ -171,6 +171,12 @@ globals:
     restore_value: true
     initial_value: '0'
 
+  # Dew state of the weather text, for hysteresis against flicker.
+  - id: g_tau
+    type: bool
+    restore_value: true
+    initial_value: 'false'
+
   # Last known "inside night window", fallback when the clock is missing.
   - id: g_nacht
     type: bool
@@ -747,16 +753,22 @@ text_sensor:
       float ts = id(temp_ruhig).state;
 
       // The rain latch is kept by the control loop, only read here.
+      if (id(g_regen) || c < sa) id(g_tau) = false;
       if (id(g_regen)) return {"Regen"};
       if (c < sa)      return {"trocken"};
 
-      bool tau = !isnan(dp) && dp <= id(schwelle_tau).state;
-      if (isnan(dp)) {
+      // Dew from the threshold down, back only 0.5 K above it (hysteresis).
+      bool tau = false;
+      if (!isnan(dp)) {
+        float st = id(schwelle_tau).state;
+        tau = id(g_tau) ? dp <= st + 0.5f : dp <= st;
+      } else {
         // Fallback: much colder than air and dark = radiative cooling.
         float u   = id(unterkuehlung_k).state;
         float lux = id(helligkeit).state;
         tau = !isnan(u) && u < ${unterkuehlung} && !isnan(lux) && lux < ${lux_nacht};
       }
+      id(g_tau) = tau;
       if (tau) {
         if (!isnan(ts) && ts <= 0.0f) return {"Reif"};
         auto t = id(uhr).now();
