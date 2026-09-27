@@ -173,7 +173,7 @@ Names are German (the firmware began as a private project); kept for compatibili
 
 | Entity | Meaning |
 |---|---|
-| Wetterlage | trocken, feucht, nass, Tau, Reif, Niesel, Regen |
+| Wetterlage | trocken, feucht, nass, Tau (Morgentau, Abendtau), Reif, Niesel, Regen |
 | Regen, Feucht | binary sensors |
 | Kapazität, Benetzung | capacitance in pF, wetting in % |
 | Oberflächentemperatur | sensor surface temperature |

@@ -700,6 +700,7 @@ text_sensor:
   #   feucht    thin film, no dew, not growing
   #   nass      wet surface, not growing (also right after rain)
   #   Tau       surface at or below the dew point, above 0 C
+  #             (Morgentau 04-11 h, Abendtau 17-23 h)
   #   Reif      same, at or below 0 C
   #   Niesel    wet and growing
   #   Regen     rain latch
@@ -731,8 +732,13 @@ text_sensor:
         float lux = id(helligkeit).state;
         tau = !isnan(u) && u < ${unterkuehlung} && !isnan(lux) && lux < ${lux_nacht};
       }
-      if (tau) return (!isnan(ts) && ts <= 0.0f) ? std::string("Reif")
-                                                 : std::string("Tau");
+      if (tau) {
+        if (!isnan(ts) && ts <= 0.0f) return {"Reif"};
+        auto t = id(uhr).now();
+        if (t.is_valid() && t.hour >= 4 && t.hour < 11) return {"Morgentau"};
+        if (t.is_valid() && t.hour >= 17 && t.hour < 23) return {"Abendtau"};
+        return {"Tau"};
+      }
 
       // Fog (untested, off): saturated outdoor air, surface near air temperature.
       // float ta = NAN, rh = NAN;
