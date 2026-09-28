@@ -11,7 +11,10 @@ layers = "F.Cu,B.Cu,F.Paste,F.Silkscreen,B.Silkscreen,F.Mask,B.Mask,Edge.Cuts"
 subprocess.run(["kicad-cli","pcb","export","gerbers","--layers",layers,"--no-x2","--use-drill-file-origin","--subtract-soldermask","-o",f"{out}/gerbers/",pcb],check=True)
 subprocess.run(["kicad-cli","pcb","export","drill","--format","excellon","--drill-origin","plot","--excellon-separate-th","--generate-map","--map-format","gerberx2","-o",f"{out}/gerbers/",pcb],check=True)
 b = pcbnew.LoadBoard(pcb)
-ROT = [(r"^SOT-23", 180), (r"^SOT-23-[56]", 90), (r"^SOIC-", 270), (r"^ESP32", 270)]
+# Most specific pattern first; the loop below stops at the first match.
+# Bug fixed 2026-09-28: "^SOT-23" also matched "SOT-23-5/-6" (both rules
+# fired, 180+90=270 instead of one), so U2/U3 came out wrong in the CPL.
+ROT = [(r"^SOT-23-[56]", 90), (r"^SOT-23$", 180), (r"^SOIC-", 270), (r"^ESP32", 270)]
 NO_ASSY = {"J1","J2","J3","J6","J4","J7","J8"}  # through-hole parts: hand-solder
 rows = {}; cpl = []
 for fp in b.GetFootprints():
@@ -22,7 +25,9 @@ for fp in b.GetFootprints():
     pos = fp.GetPosition(); name = str(fp.GetFPID().GetLibItemName())
     rot = fp.GetOrientationDegrees()
     for pat, add in ROT:
-        if re.match(pat, name): rot = (rot + add) % 360
+        if re.match(pat, name):
+            rot = (rot + add) % 360
+            break
     cpl.append((ref, round(pcbnew.ToMM(pos.x) - 100, 4), round(136 - pcbnew.ToMM(pos.y), 4), "Top", rot))
 with open(f"{out}/bom_jlcpcb.csv", "w", newline="") as f:
     w = csv.writer(f); w.writerow(["Comment", "Designator", "Footprint", "LCSC Part #"])
