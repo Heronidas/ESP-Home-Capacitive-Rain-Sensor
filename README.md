@@ -156,7 +156,7 @@ Notes:
 * Keep glue off the sensor face and away from the edge where water runs off; a glue bead there holds a water film and reads as wet.
 * Solder the wires and **test the sensor and the VEML7700 before gluing**; afterwards nothing is reworkable.
 * Route the cable so it leaves the holder downwards, with a drip loop, and add strain relief. Use a cable rated for outdoor use (plain LiYY is not UV resistant; protect it or use an outdoor type).
-* If the VEML7700 sits behind a cover or lacquer, set `veml_glasfaktor` in the YAML.
+* If the VEML7700 sits behind a cover or lacquer, adjust *Glasfaktor* (default 1.6) via the number entity; no reflash.
 * Use stainless screws for the wall mounting.
 
 ## Calibration
@@ -180,6 +180,7 @@ Names are German (the firmware began as a private project); kept for compatibili
 | Oberflächentemperatur | sensor surface temperature |
 | Taupunkt, Abstand zum Taupunkt | outdoor dew point, surface minus dew point |
 | Tauschwelle | distance to the dew point from which the state shows dew (default 2 K) |
+| Glasfaktor | multiplier compensating the VEML7700's cover attenuation (default 1.6, estimate) |
 | Heizung, Automatikbetrieb | heater switch, master switch for automatic heating and night mode |
 | Nachtmodus, Nachtmodus von/bis | allows deep sleep in the night window (off by default); window in half hours, e.g. 22.5 = 22:30 |
 | Heizsperre aktiv, Heizkonto, Sperre verbleibend | heating-time limit |
