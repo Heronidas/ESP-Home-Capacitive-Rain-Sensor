@@ -18,7 +18,7 @@ This one is different:
 * **Sealed capacitive element.** No exposed metal, so nothing corrodes, and it reacts to a few drops rather than to a bucketful.
 * **Heated.** After the rain stops the heater dries the surface, so the sensor reports "dry" within minutes instead of staying wet for hours. It also melts snow and frost.
 * **Knows what it measures.** Rate of rise and dew point separate rain from dew, fog and humid air, which is where simple sensors give false alarms.
-* **Yours to change.** Open hardware, open firmware, everything visible in one ESPHome YAML. Thresholds, heater limits and night mode are adjustable in Home Assistant without reflashing.
+* **Yours to change.** Open hardware, open firmware, everything visible in one ESPHome YAML. Thresholds, heater limits and night mode are adjustable at runtime, in Home Assistant or on the device's own web page, without reflashing.
 
 ## What you can do with it
 
@@ -32,7 +32,7 @@ This one is different:
 ## What is in this repository
 
 * **Board.** An ESP32 carrier board (72 x 56 mm, 2 layers) that reads the sensor and runs its 12 V heater from a plain 5 V supply. Orderable fully assembled from JLCPCB; you solder only the screw terminals and headers.
-* **Firmware.** The ESPHome configuration: weather state (dry, humid, wet, dew, frost, drizzle, rain), safe heater control, optional night mode, battery monitoring.
+* **Firmware.** The ESPHome configuration: weather state (dry, humid, wet, dew, frost, drizzle, rain), safe heater control, optional night mode, battery monitoring. Two variants with identical logic: one for Home Assistant (native API), one standalone with a local web page and MQTT for FHEM, ioBroker, Node-RED or Home Assistant via MQTT discovery.
 * **Build notes.** Wiring, calibration, a 3D-printable sensor holder, troubleshooting.
 
 ![Rev A board, 3D view](docs/board-3d.png)
@@ -94,7 +94,7 @@ The sensor has three isolated groups: capacitor (1, 6), heater (2, 5, about 42 o
 
 OSC must never touch 12 V. VEML7700 on the I2C terminal or Qwiic, HTU21D in the socket labelled HTU21D. Power on POWER IN (5V, GND; reverse-polarity protected). BAT is only for battery-voltage monitoring (1S Li-ion, up to 4.2 V through the 100k/100k divider); leave it open otherwise.
 
-**Flashing.** No USB port on the board; use the UART header J7 (adapter RX to TX, TX to RX, GND to GND) and power the board through POWER IN, since J7 has no power pin. Hold BOOT, tap RESET, release BOOT, then `esphome run firmware/regensensor_de.yaml` (German entity names) or `firmware/regensensor_en.yaml` (identical firmware, English entity names/substitution keys). The config builds with ESPHome 2026.9. It needs `secrets.yaml` with `wifi_ssid`, `wifi_password`, and the API/OTA keys (`regensensor_api_key`/`regensensor_ota_password` for the DE file, `rain_sensor_api_key`/`rain_sensor_ota_password` for the EN file). Set `aussen_temp_entity`/`aussen_feuchte_entity` (DE) or `outdoor_temp_entity`/`outdoor_humidity_entity` (EN) in the substitutions to your outdoor sensors; if they do not exist the sensors stay empty and the fallback applies.
+**Flashing.** No USB port on the board; use the UART header J7 (adapter RX to TX, TX to RX, GND to GND) and power the board through POWER IN, since J7 has no power pin. Hold BOOT, tap RESET, release BOOT, then `esphome run firmware/regensensor_de.yaml` (German entity names) or `firmware/regensensor_en.yaml` (identical firmware, English entity names/substitution keys). The config builds with ESPHome 2026.9. It needs `secrets.yaml` with `wifi_ssid`, `wifi_password`, and the API/OTA keys (`regensensor_api_key`/`regensensor_ota_password` for the DE file, `rain_sensor_api_key`/`rain_sensor_ota_password` for the EN file). Set `aussen_temp_entity`/`aussen_feuchte_entity` (DE) or `outdoor_temp_entity`/`outdoor_humidity_entity` (EN) in the substitutions to your outdoor sensors; if they do not exist the sensors stay empty and the fallback applies. For the standalone variant see below.
 
 ## Building without the PCB
 
@@ -194,6 +194,16 @@ Two ways, both optional. Without outdoor data the firmware uses the fallback (su
 * **Substitutions.** Set `aussen_temp_entity` and `aussen_feuchte_entity` in the YAML. Works, but Home Assistant can take up to a minute to deliver the values after boot, so it does not help in night mode (the device is awake for about 35 s).
 * **Blueprint.** `blueprints/regensensor_aussenluft.yaml`: pick your outdoor sensors in the UI (trigger sensor: *NTC Widerstand* of the Regensensor); it pushes them through the `set_aussenluft(temperatur, feuchte)` action on the first reading after each wake-up. Copy the file to `config/blueprints/automation/` (or import it from the GitHub URL) and create an automation from it. Tested: the dew point is available about 12 s after wake-up. While the device is awake all day it simply pushes about every 40 s.
 
+### Standalone variant (web page and MQTT)
+
+`firmware/regensensor_mqtt_de.yaml` / `regensensor_mqtt_en.yaml`: same logic and entities, but without the Home Assistant API. For FHEM, ioBroker, Node-RED or any MQTT broker; Home Assistant still finds it through MQTT discovery.
+
+* **Web page.** `http://<device-ip>/` shows all states and settings and accepts OTA uploads. Served from the device itself, no internet or login needed; keep it in a trusted network.
+* **MQTT.** `secrets.yaml` additionally needs `mqtt_broker`, `mqtt_username`, `mqtt_password`. States go to `regensensor/<component>/<name>/state` (EN: `rain-sensor/...`), retained. Birth, will and shutdown messages are off so the last states stay visible while the device sleeps.
+* **Outdoor air.** Publish plain numbers, retained, to `regensensor/aussenluft/temperatur` (°C) and `regensensor/aussenluft/feuchte` (%) (EN: `rain-sensor/outdoor/temperature`, `rain-sensor/outdoor/humidity`). The last retained value counts as current, so stop publishing by clearing the topic, not by going silent.
+* **Time.** From SNTP (`zeitzone`/`timezone` substitution, default Europe/Berlin) instead of Home Assistant.
+* **Night mode.** Commands sent while the device sleeps are lost (not retained), same as with the API. Switch night mode off while it is awake.
+
 ## Troubleshooting
 
 | Symptom | Cause |
@@ -276,7 +286,7 @@ IO32 is also the alternative NTC pull-up drive (see solder jumpers). The expansi
 ## Repository
 * `hardware/` KiCad project (schematic, PCB)
 * `fabrication/` Gerbers, drill, JLCPCB BOM/CPL
-* `firmware/` ESPHome config
+* `firmware/` ESPHome config: `regensensor_de/_en.yaml` (Home Assistant API), `regensensor_mqtt_de/_en.yaml` (web page and MQTT)
 * `blueprints/` Home Assistant blueprint for outdoor air
 * `docs/` images
 * `mechanical/` sensor holder STL
