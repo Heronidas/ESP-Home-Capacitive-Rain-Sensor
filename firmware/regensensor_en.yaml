@@ -4,7 +4,7 @@
 # Calibrate: read the dry "Frequency", enter it as "Dry Frequency", then tune thresholds.
 
 substitutions:
-  name: rain_sensor
+  name: rain-sensor
   friendly_name: Rain Sensor
 
   pin_i2c_sda: GPIO21
@@ -78,11 +78,11 @@ api:
   actions:
     - action: set_outdoor_air
       variables:
-        temperatur: float
+        temperature: float
         humidity: float
       then:
         - lambda: |-
-            id(g_push_temp)  = temperatur;
+            id(g_push_temp)  = temperature;
             id(g_push_rh)    = humidity;
             id(g_push_stamp) = millis();
 
@@ -105,7 +105,7 @@ captive_portal:
 # Night window needs valid time; without it the device never sleeps.
 time:
   - platform: homeassistant
-    id: clock
+    id: ha_time
 
 # Sleep is triggered only by the interval at the bottom.
 deep_sleep:
@@ -542,7 +542,7 @@ sensor:
           id(capacitance).publish_state(c_pf);
 
           float rate = NAN;
-          auto now_time = id(clock).now();
+          auto now_time = id(ha_time).now();
           if (now_time.is_valid()) {
             uint32_t t  = now_time.timestamp;
             float    v  = id(c_previous);
@@ -803,7 +803,7 @@ text_sensor:
       id(g_dew) = dew;
       if (dew) {
         if (!isnan(ts) && ts <= 0.0f) return {"Frost"};
-        auto t = id(clock).now();
+        auto t = id(ha_time).now();
         if (t.is_valid() && t.hour >= 4 && t.hour < 11) return {"Morning Dew"};
         if (t.is_valid() && t.hour >= 17 && t.hour < 23) return {"Evening Dew"};
         return {"Dew"};
@@ -867,7 +867,7 @@ interval:
           // mode this loop stalls (35 s awake per 5 min). Without a clock
           // it falls back to one second per run.
           float dt = 1.0f;
-          auto  now = id(clock).now();
+          auto  now = id(ha_time).now();
           if (now.is_valid()) {
             uint32_t now_ts = now.timestamp;
             uint32_t prev_ts = id(g_account_stamp);
@@ -960,7 +960,7 @@ interval:
                   int end_half = (int) roundf(f_until * 2);
                   if (start_half == end_half) return false;            // empty window
 
-                  auto now_time = id(clock).now();
+                  auto now_time = id(ha_time).now();
                   if (now_time.is_valid()) {
                     int h = now_time.hour * 2 + (now_time.minute >= 30 ? 1 : 0);
                     bool inside = (start_half < end_half) ? (h >= start_half && h < end_half)
