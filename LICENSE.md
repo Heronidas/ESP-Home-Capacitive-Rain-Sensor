@@ -2,6 +2,8 @@
 
 Free for private and other non-commercial use. Commercial use (selling boards, kits, assembled sensors, or products based on this design or firmware) needs written permission from the author. Commercial licenses are available on request (one-time fee, per-unit fee or revenue share): open an issue or contact [Heronidas](https://github.com/Heronidas) on GitHub.
 
+Passing on spare boards or kits from your own order at cost (no profit) is fine and does not count as commercial use.
+
 - Hardware and documentation (`hardware/`, `fabrication/`, `mechanical/`, `docs/`, `README.md`): Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0). Full text: `LICENSES/CC-BY-NC-SA-4.0.txt`.
 - Firmware, blueprint and tools (`firmware/`, `blueprints/`, `tools/`): PolyForm Noncommercial License 1.0.0. Full text: `LICENSES/PolyForm-Noncommercial-1.0.0.md`.
 
