@@ -18,7 +18,7 @@ This one is different:
 * **Sealed capacitive element.** No exposed metal, so nothing corrodes, and it reacts to a few drops rather than to a bucketful.
 * **Heated.** After the rain stops the heater dries the surface, so the sensor reports "dry" within minutes instead of staying wet for hours. It also melts snow and frost.
 * **Knows what it measures.** Rate of rise and dew point separate rain from dew, fog and humid air, which is where simple sensors give false alarms.
-* **Yours to change.** Open hardware, open firmware, everything visible in one ESPHome YAML. Thresholds, heater limits and night mode are adjustable at runtime, in Home Assistant or on the device's own web page, without reflashing.
+* **Yours to change.** Hardware and firmware fully published (free for non-commercial use), everything visible in one ESPHome YAML. Thresholds, heater limits and night mode are adjustable at runtime, in Home Assistant or on the device's own web page, without reflashing.
 
 ## What you can do with it
 
@@ -303,4 +303,4 @@ If this project saved you some time, you can support it on Ko-fi. Not required, 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/heronidas)
 
 ## License
-Hardware, fabrication files and holder: CERN-OHL-P-2.0. Firmware, blueprint, docs and tools: MIT. See `LICENSE.md`.
+Free for private and non-commercial use; commercial use only with written permission. Hardware, fabrication files, holder and docs: CC BY-NC-SA 4.0. Firmware, blueprint and tools: PolyForm Noncommercial 1.0.0. See `LICENSE.md`.

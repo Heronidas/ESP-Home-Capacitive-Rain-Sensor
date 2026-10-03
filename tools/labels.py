@@ -1,5 +1,5 @@
 # Silkscreen labels: (text, x, y, size) in board coordinates (mm)
-L = [("RC-SPC1KA Rain Sensor rev A", 15.5, 1.6), ("CERN-OHL-P-2.0", 11.5, 4.2)]
+L = [("RC-SPC1KA Rain Sensor rev A", 15.5, 1.6), ("CC BY-NC-SA 4.0", 11.5, 4.2)]
 def block(x0, pitch, func, num, title):
     for n, (f, k) in enumerate(zip(func, num)):
         L.append((f, x0 + n * pitch, 52.75, 0.65 if len(f) > 4 else 0.8)); L.append((k, x0 + n * pitch, 53.9))

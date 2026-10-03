@@ -3587,7 +3587,7 @@
   (gr_text "GND" (at 151.3 83) (layer "F.SilkS") (tstamp d9a8d511-594b-4010-8f13-f2818f4d047a)
     (effects (font (size 0.8 0.8) (thickness 0.15)))
   )
-  (gr_text "CERN-OHL-P-2.0" (at 111.5 84.2) (layer "F.SilkS") (tstamp dd33587a-e4b9-4331-96e8-a990929cf87e)
+  (gr_text "CC BY-NC-SA 4.0" (at 111.5 84.2) (layer "F.SilkS") (tstamp dd33587a-e4b9-4331-96e8-a990929cf87e)
     (effects (font (size 0.8 0.8) (thickness 0.15)))
   )
   (gr_text "32" (at 107.3 94.08) (layer "F.SilkS") (tstamp df394c75-9718-4c4f-bb98-a4233b322769)
