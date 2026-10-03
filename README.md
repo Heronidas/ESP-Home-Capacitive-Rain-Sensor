@@ -284,7 +284,6 @@ IO32 is also the alternative NTC pull-up drive (see solder jumpers). The expansi
 * DRC: one intended report remains, the bridged solder jumper SJ2 (deliberate short to GND). Library-not-found warnings appear only if the KiCad footprint libraries are not configured.
 * The files were generated with KiCad 7 file formats; KiCad 8-10 upgrade them on opening. Save once and re-run DRC.
 * Rev A is a prototype: not yet built or tested. The results will be added here.
-* Rev A boards assembled before 2026-10-03 carry R1 = 1 MΩ. Replace it with 220 kΩ (0805), otherwise a wet surface can stop the oscillator. Then measure and enter the new *Trockenfrequenz*.
 
 ## Repository
 * `hardware/` KiCad project (schematic, PCB)
