@@ -303,4 +303,4 @@ If this project saved you some time, you can support it on Ko-fi. Not required, 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/heronidas)
 
 ## License
-Hardware, fabrication files and holder: CERN-OHL-P-2.0. Firmware, docs and tools: MIT. See `LICENSE.md`.
+Hardware, fabrication files and holder: CERN-OHL-P-2.0. Firmware, blueprint, docs and tools: MIT. See `LICENSE.md`.
