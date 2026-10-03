@@ -2649,7 +2649,7 @@
         (effects (font (size 0.8 0.8) (thickness 0.12)))
       (tstamp 5de11076-bb9b-4fce-ae7d-15f47961667b)
     )
-    (fp_text value "1M" (at 0 1.65 90) (layer "F.Fab") hide
+    (fp_text value "220k" (at 0 1.65 90) (layer "F.Fab") hide
         (effects (font (size 1 1) (thickness 0.15)))
       (tstamp 8bb77091-de15-4ae7-a955-e3f74721bc05)
     )

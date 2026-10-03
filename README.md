@@ -39,7 +39,7 @@ This one is different:
 
 *Rev A, 72 x 56 mm, KiCad 3D view. The magenta dots mark pin 1 (as in the JLCPCB preview).*
 
-The board has an I2C bus (Qwiic connector, socket and screw terminal) and an 8-pin expansion header. A light sensor (VEML7700), temperature and humidity in the enclosure (HTU21D) and a battery monitor are supported by the firmware. Pressure, UV, wind and a rain gauge work on the same hardware, but the firmware for them is not written yet.
+The board has an I2C bus (Qwiic connector, socket and screw terminal) and an 8-pin expansion header. A light sensor (VEML7700), temperature and humidity in the enclosure (HTU21D) and a battery monitor are supported by the firmware. Pressure, UV, wind and a rain gauge work on the same hardware; the YAML has commented-out entries for them (untested).
 
 ## Status
 
@@ -47,7 +47,7 @@ The firmware runs on a perfboard prototype (ESP32 dev board, same pins). The Rev
 
 ## The sensor
 
-The RC-SPC1KA (Radiocontrolli) is a sealed capacitive rain sensor. There is no exposed metal, so nothing corrodes, and it has two extras: a heater (about 42 ohm, roughly 3.4 W at 12 V) and an NTC (1 kOhm at 25 C) for the surface temperature. Dry it measures about 100 pF; a soaked surface reads several thousand pF.
+The RC-SPC1KA (Radiocontrolli) is a sealed capacitive rain sensor. There is no exposed metal, so nothing corrodes, and it has two extras: a heater (about 42 ohm, roughly 3.4 W at 12 V) and an NTC (1 kOhm at 25 C) for the surface temperature. Dry it measures about 100 pF; on the prototype a soaked surface reads about 900-1250 pF (RC-SPC1K datasheet: more than 550 pF at full water cover).
 
 Available from distributors, for example [Novaut](https://www.novaut.com/en/620521-rc-spc1ka-radiocontrolli.html) (about 13 EUR incl. VAT, EU shipping), [TME](https://www.tme.com/us/en-us/details/rc-spc1ka/humidity-sensors/radiocontrolli/) or [DigiKey](https://www.digikey.com/en/products/detail/radiocontrolli/RC-SPC1KA/13688193). Prices and stock as of 2026-09; not affiliated with any of them.
 
@@ -55,16 +55,16 @@ It is only the element, so this project adds the rest: a board that reads it and
 
 ## How it works
 
-**Measurement.** The sensor capacitance sits in a relaxation oscillator (SN74HC14, 1 MOhm). Wetter surface, larger capacitance, lower frequency. The ESP32 counts the pulses with the hardware PCNT peripheral, which is much quieter than software counting. You measure the frequency of your own dry sensor once and enter it as *Trockenfrequenz*; that value defines 100 pF and everything else is scaled to it (`C = f_dry * 100 / f`). Cable length and layout drop out of the calibration, so keep the cable as it was when you calibrated.
+**Measurement.** The sensor capacitance sits in a relaxation oscillator (SN74HC14, R1 = 220 kOhm). Wetter surface, larger capacitance, lower frequency. The ESP32 counts the pulses with the hardware PCNT peripheral, which is much quieter than software counting. You measure the frequency of your own dry sensor once and enter it as *Trockenfrequenz*; that value defines 100 pF and everything else is scaled to it (`C = f_dry * 100 / f`). Cable length and layout drop out of the calibration, so keep the cable as it was when you calibrated. R1 does not change the pF values, only the frequency range: with 1 MOhm a water film leaked enough current to stop the oscillator in rain, 220 kOhm keeps it running up to a soaked surface.
 
 **Rain or dew.** Capacitance says how wet, not why: heavy dew reaches the same values as light rain, and the sensor also reacts to humid air before any liquid water is there (a reversible adsorbed film). The firmware adds two criteria:
 
-* rate of rise (rain: hundreds of pF/min, condensation: a few pF/min)
-* dew point: with outdoor temperature and humidity from Home Assistant it checks whether the surface is at or below the dew point (frost point below 0 °C). Without them it falls back to "surface clearly colder than the enclosure air, and dark".
+* rate of rise (precipitation: tens to hundreds of pF/min, condensation: a few pF/min). A fast rise latches `Niesel` (*Niesel Erkennung*, default 60 pF/min) or, from the rain level on, `Regen` (*Regen Erkennung*, default 150 pF/min). Both end after *Regenende nach* (default 7 min) without a further rise, or when the surface dries.
+* dew point: with outdoor temperature and humidity from Home Assistant it checks whether the surface is at or below the dew point (frost point below 0 °C). Without them, slow wetting in the dark reads as dew.
 
 Result is the *Wetterlage* text: `trocken`, `feucht`, `nass`, `Tau`, `Reif`, `Niesel`, `Regen`. Dew reads `Morgentau` from 4 to 11 h and `Abendtau` from 17 to 23 h. Every threshold has a small hysteresis so the text does not flicker at a limit. Fog (`Nebel`) is prepared in the YAML as commented-out code, untested.
 
-**Heater.** Wet but not raining hard: heat, so the sensor reports dry soon after the rain stops (and melts snow and frost). Off at 45 C surface temperature, back on below 40 C, checked every second (about 0.7 K/s heating rate). No heating during real rain. Heating time is budgeted (default 15 min, then a 2 h pause) so fog or drizzle cannot keep it running for hours. Implausible NTC readings (open or shorted wire) switch it off. It always starts off after a reset.
+**Heater.** Wet without precipitation (dew, frost, the film left after rain): heat, so the sensor reports dry soon after the rain stops. No heating while `Niesel` or `Regen` is latched, so the sensor can see the rain. After a rain end the heater dries the surface; still at the rain level after 3 min of drying means it is still raining, and the latch is set again. `Regen` stays reported until the surface has dried below the rain level, so steady rain does not report a false end. Off at 45 C surface temperature, back on below 40 C, checked every second (about 0.7 K/s heating rate). Heating time is budgeted (default 15 min, then a 2 h pause) so fog or drizzle cannot keep it running for hours. Implausible NTC readings (open or shorted wire) switch it off. It always starts off after a reset.
 
 **Battery.** Optional night mode: deep sleep with a 5 min wake interval, awake about 35 s per cycle. Off by default.
 
@@ -105,7 +105,7 @@ The circuit is small. Use an ESP32 dev board (3.3 V regulator on board) and wire
 Parts:
 
 * ESP32 dev board (30 or 38 pin, any with GPIO13, 21, 22, 25, 34, 35 broken out)
-* SN74HC14 (DIP-14 works), 100 nF, 1 MΩ
+* SN74HC14 (DIP-14 works), 100 nF, 220 kΩ
 * NTC pull-up: 2.8 kΩ (two 5.6 kΩ in parallel, or 2.7 kΩ), 100 nF
 * MT3608 boost module, set to 12 V
 * N-MOSFET, logic level, e.g. IRLZ44N or AO3400A on a breakout, 100 Ω gate resistor, 100 kΩ gate pull-down
@@ -119,7 +119,7 @@ Wiring:
 | 74HC14 pin 7 | GND |
 | 74HC14 pins 3, 5, 9, 11, 13 | GND (unused inputs) |
 | 74HC14 pin 2 (output) | GPIO25 |
-| 1 MΩ | between 74HC14 pins 1 and 2 |
+| 220 kΩ | between 74HC14 pins 1 and 2 |
 | Sensor pin 6 (OSC) | 74HC14 pin 1 |
 | Sensor pins 1 and 4 | GND |
 | Sensor pin 3 (NTC) | GPIO34, 2.8 kΩ to 3.3 V, 100 nF to GND |
@@ -163,8 +163,8 @@ Notes:
 
 1. **Dry frequency.** Surface dry, heater off. Average *Frequenz* over a few minutes and enter it as *Trockenfrequenz*. The default in the YAML (13549 Hz) is a placeholder from the vendor example.
 2. **NTC.** Reference thermometer next to the head, same air, no sun, heater off for 30 min. Trim with `adc_faktor` (coarse) or *NTC Offset* (fine, +-5 K). Do not calibrate against air temperature under a clear night sky: the plate is legitimately colder, that is the dew signal.
-3. **Thresholds.** Start values: display 300 pF, heat 380 pF, rain 650 pF (the datasheet table gives 320 / 450 / 2000). Adjust them via the number entities; no reflash.
-4. **Dew threshold.** *Tauschwelle* (default 2 K) is the surface-minus-dew-point distance from which the state reads dew. Outdoor sensor and plate sit in different places, so tune it on real dew mornings.
+3. **Thresholds.** Start values: display 110 pF, heat 200 pF, rain 500 pF, from the prototype: dewy night up to ~120, mist ~270, three drops ~290, heavy spray ~600, soaked ~900-1250 pF. Adjust them via the number entities; no reflash. Some datasheet tables list several thousand pF for a water-covered surface; a wet film on the open plate does not get there.
+4. **Dew threshold.** *Tauschwelle* (default 2 °C) is the surface-minus-dew-point distance from which the state reads dew. Outdoor sensor and plate sit in different places, so tune it on real dew mornings.
 5. **Humid nights.** Note the maximum capacitance in a dry but humid night and keep the thresholds above it (*Abstand zum Taupunkt* helps), otherwise every fog reads as wet.
 6. Leave *Automatikbetrieb* off the first night to see the raw values without heater influence.
 
@@ -176,10 +176,12 @@ Names are German (the firmware began as a private project); kept for compatibili
 |---|---|
 | Wetterlage | trocken, feucht, nass, Tau (Morgentau, Abendtau), Reif, Niesel, Regen |
 | Regen, Feucht | binary sensors |
-| Kapazität, Kapazität Änderungsrate, Benetzung | capacitance in pF, rate of change in pF/min (1 min mean), wetting in % |
+| Kapazität, Kapazität Änderungsrate, Benetzung | capacitance in pF, rate of change in pF/min (1 min mean), wetting in % (RC-SPC1K datasheet table, 100 % from 550 pF) |
 | Oberflächentemperatur | sensor surface temperature |
 | Taupunkt, Abstand zum Taupunkt | outdoor dew point, surface minus dew point |
-| Tauschwelle | distance to the dew point from which the state shows dew (default 2 K) |
+| Tauschwelle | distance to the dew point from which the state shows dew (default 2 °C) |
+| Niesel Erkennung, Regen Erkennung | rise that counts as drizzle / rain (default 60 / 150 pF/min) |
+| Regenende nach | drizzle and rain end after this long without a rise (default 7 min) |
 | Glasfaktor | multiplier compensating the VEML7700's cover attenuation (default 1.6, estimate) |
 | Heizung, Automatikbetrieb | heater switch, master switch for automatic heating and night mode |
 | Nachtmodus, Nachtmodus von/bis | allows deep sleep in the night window (off by default); window in half hours, e.g. 22.5 = 22:30 |
@@ -189,7 +191,7 @@ Names are German (the firmware began as a private project); kept for compatibili
 
 ### Outdoor air for the dew point
 
-Two ways, both optional. Without outdoor data the firmware uses the fallback (surface colder than the enclosure air, and dark).
+Two ways, both optional. Without outdoor data the firmware uses the fallback (slow wetting in the dark reads as dew).
 
 * **Substitutions.** Set `aussen_temp_entity` and `aussen_feuchte_entity` in the YAML. Works, but Home Assistant can take up to a minute to deliver the values after boot, so it does not help in night mode (the device is awake for about 35 s).
 * **Blueprint.** `blueprints/regensensor_aussenluft.yaml`: pick your outdoor sensors in the UI (trigger sensor: *NTC Widerstand* of the Regensensor); it pushes them through the `set_aussenluft(temperatur, feuchte)` action on the first reading after each wake-up. Copy the file to `config/blueprints/automation/` (or import it from the GitHub URL) and create an automation from it. Tested: the dew point is available about 12 s after wake-up. While the device is awake all day it simply pushes about every 40 s.
@@ -209,7 +211,7 @@ Two ways, both optional. Without outdoor data the firmware uses the fallback (su
 | Symptom | Cause |
 |---|---|
 | Kapazität unknown | *Trockenfrequenz* not set, or no oscillator signal |
-| Frequenz 0 | Oscillator stopped: OSC wire, GND, soaked surface. Reported as wet. |
+| Frequenz 0 | Oscillator stopped: OSC wire, GND, or R1 too large (1 MΩ stops on a wet surface). Reported as wet. |
 | Frequenz jumps | I2C crosstalk (median-filtered already), weak GND at sensor pin 1, very long cable |
 | Surface temperature NaN, heater never runs | Implausible NTC resistance (open or shorted): check the SENSOR terminal. Deliberate, the heater stays off. |
 | Humid nights read wet or Tau | Thresholds too low (calibration step 5), or *Tauschwelle* too high |
@@ -270,8 +272,8 @@ Silkscreen: each screw terminal is labelled below the block with pin function an
 | VEML7700 light sensor | I2C (Qwiic, socket or terminal), address 0x10 | in firmware |
 | HTU21D temperature/humidity (inside the enclosure) | I2C, socket labelled HTU21D | in firmware |
 | Battery voltage | J1 pin BAT | in firmware |
-| Pressure (BME280/BMP280), UV (LTR390), CO2 etc. | I2C, 3.3 V modules | hardware supports it, no ESPHome config yet, untested |
-| Wind (pulse anemometer), tipping bucket, DS18B20 | expansion header J8: 3V3, GND, IO32, IO33, IO26, IO27, IO14, IO4 | hardware supports it, no ESPHome config yet, untested |
+| Pressure (BME280/BMP280), UV (LTR390), CO2 etc. | I2C, 3.3 V modules | BME280 (0x76) and LTR390 (0x53) commented out in the YAML, untested |
+| Wind (pulse anemometer), tipping bucket, DS18B20 | expansion header J8: 3V3, GND, IO32, IO33, IO26, IO27, IO14, IO4 | anemometer IO27, wind vane IO33, tipping bucket IO26 commented out in the YAML, untested; tips during night-mode sleep are lost |
 
 IO32 is also the alternative NTC pull-up drive (see solder jumpers). The expansion header has no 5 V pin.
 
@@ -282,6 +284,7 @@ IO32 is also the alternative NTC pull-up drive (see solder jumpers). The expansi
 * DRC: one intended report remains, the bridged solder jumper SJ2 (deliberate short to GND). Library-not-found warnings appear only if the KiCad footprint libraries are not configured.
 * The files were generated with KiCad 7 file formats; KiCad 8-10 upgrade them on opening. Save once and re-run DRC.
 * Rev A is a prototype: not yet built or tested. The results will be added here.
+* Rev A boards assembled before 2026-10-03 carry R1 = 1 MΩ. Replace it with 220 kΩ (0805), otherwise a wet surface can stop the oscillator. Then measure and enter the new *Trockenfrequenz*.
 
 ## Repository
 * `hardware/` KiCad project (schematic, PCB)

@@ -100,7 +100,7 @@ u4 = {p: None for p in range(1, 15)}
 u4.update({1: "/OSC_CAP", 2: "/OSC_OUT", 3: "GND", 5: "GND", 9: "GND", 11: "GND", 13: "GND", 7: "GND", 14: "+3V3"})
 add("U4", ("74xx", "74HC14"), "SN74HC14DR", ("Package_SO", "SOIC-14_3.9x8.7mm_P1.27mm"),
     u4, (47, 36, 0), (100, 260, 0), "C6820", "sensor")
-add("R1", ("Device", "R"), "1M", R0805, {1: "/OSC_CAP", 2: "/OSC_OUT"}, (53, 33, 0), (140, 260, 0), "C17514", "sensor")
+add("R1", ("Device", "R"), "220k", R0805, {1: "/OSC_CAP", 2: "/OSC_OUT"}, (53, 33, 0), (140, 260, 0), "C17556", "sensor")
 add("C6", ("Device", "C"), "100n", C0805, {1: "+3V3", 2: "GND"}, (52, 40, 90), (160, 260, 0), "C49678", "sensor")
 add("R2", ("Device", "R"), "5.6k", R0805, {1: "/NTC_PU", 2: "/NTC_ADC"}, (58, 40, 90), (180, 260, 0), "C4382", "sensor")
 add("R3", ("Device", "R"), "5.6k", R0805, {1: "/NTC_PU", 2: "/NTC_ADC"}, (61, 40, 90), (200, 260, 0), "C4382", "sensor")

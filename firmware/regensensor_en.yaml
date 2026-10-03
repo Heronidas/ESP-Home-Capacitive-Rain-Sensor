@@ -35,19 +35,20 @@ substitutions:
   c_freq_reference_start: "13549.0"
   c_wet_max: "5000.0"   # pF, used when the oscillator stops (0 Hz)
 
-  # Classification by rate of change (pF/min): rain ~500-1500, condensation
-  # 2-5, noise ~+-15.
-  rate_growing: "60"
-  rate_rain: "150"
+  # Precipitation: rise thresholds are runtime numbers ("Drizzle Detection",
+  # "Rain Detection"; dew rises a few pF/min). Below rate_steady the level
+  # counts as steady for "Rain End After".
+  rate_steady: "10"       # pF/min
+  # After a rain end the heater dries the surface. Still at the rain level
+  # after this many seconds of drying = still raining, rain is set again.
+  rain_heater_test: "180"  # s
 
   # Hysteresis against flicker at thresholds: capacitance states fall back
-  # below 95 % of their threshold, dew 0.5 K above its threshold, drizzle
-  # below 2/3 of the rate threshold.
+  # below 95 % of their threshold, dew 0.5 °C above its threshold.
   hyst_factor: "0.95"
-  hyst_dew: "0.5"        # K
+  hyst_dew: "0.5"        # °C
 
-  # Dew fallback without outdoor data: surface colder than air and dark.
-  undercooling: "-1.0"  # K
+  # Dew fallback without a dew point: slow wetting in the dark.
   lux_night: "5"         # lx
 
   # Outdoor air from Home Assistant, used for the dew point. Missing entities
@@ -164,11 +165,31 @@ globals:
     restore_value: true
     initial_value: '0'
 
-  # "It is raining" latch, so heavy dew is not reported as rain.
+  # Precipitation latches (set by a fast rise, see the control loop), so heavy
+  # dew is not reported as rain and the heater stays off while it rains.
   - id: g_rain
     type: bool
     restore_value: true
     initial_value: 'false'
+  - id: g_drizzle
+    type: bool
+    restore_value: true
+    initial_value: 'false'
+  # Rain released by "Rain End After" while still above the rain level: only
+  # a new fast rise or the heater test sets it again.
+  - id: g_rain_ended
+    type: bool
+    restore_value: true
+    initial_value: 'false'
+  # Unix time since the level is steady (0 = rising).
+  - id: g_steady_since
+    type: uint32_t
+    restore_value: true
+    initial_value: '0'
+  # Seconds of drying after a rain end (heater test).
+  - id: g_drying_sec
+    type: float
+    initial_value: '0.0'
 
   # Unix time of the last control-loop run (account and lockout use real time).
   - id: g_account_stamp
@@ -189,9 +210,6 @@ globals:
     type: bool
     restore_value: true
     initial_value: 'false'
-  - id: g_drizzle
-    type: bool
-    initial_value: 'false'
 
   # Last known "inside night window", fallback when the clock is missing.
   - id: g_night
@@ -201,10 +219,10 @@ globals:
 
 
 # Runtime thresholds; initial_value applies only on the first boot.
-# The sensor also reacts to humid air long before a drop lies on it:
-# keep thresholds above the maximum seen in a dry, dewy night ("Abstand zum
-# Taupunkt"). Datasheet jumps (>2000 pF at 50 %) do not occur on the open
-# surface, so do not set the rain threshold from that table.
+# Start values from the prototype (R1 220k): dry 100, dewy night up to ~120,
+# mist ~270, three drops ~290, heavy spray ~600, soaked cloth 870-1240 pF.
+# The sensor reacts to humid air before water lies on it: keep the display
+# threshold above the maximum of a dry, humid night.
 number:
   # Dry frequency of your setup = 100 pF. Read "Frequency" with a completely
   # dry surface and enter the mean here. "Capacitance" stays NAN without it.
@@ -229,7 +247,7 @@ number:
     min_value: 100
     max_value: 1500
     step: 10
-    initial_value: 300
+    initial_value: 110
     restore_value: true
     optimistic: true
     mode: box
@@ -240,7 +258,8 @@ number:
   - platform: template
     name: "Dew Threshold"
     id: threshold_dew
-    unit_of_measurement: "K"
+    unit_of_measurement: "°C"
+    device_class: temperature_delta
     min_value: 0
     max_value: 5
     step: 0.1
@@ -265,7 +284,7 @@ number:
     mode: box
     entity_category: config
 
-  # From here the automation heats ("Humid" turns on).
+  # From here the automation heats ("Humid" turns on), unless it rains.
   - platform: template
     name: "Humidity Threshold"
     id: threshold_humid
@@ -273,13 +292,14 @@ number:
     min_value: 100
     max_value: 1500
     step: 10
-    initial_value: 380
+    initial_value: 200
     restore_value: true
     optimistic: true
     mode: box
     entity_category: config
 
-  # Above this, no heating (the heater cannot keep up with rain).
+  # Rain level: rain needs this level plus a fast rise ("Rain Detection")
+  # or a surface clearly above the dew point.
   - platform: template
     name: "Rain Threshold"
     id: threshold_rain
@@ -287,7 +307,48 @@ number:
     min_value: 200
     max_value: 5000
     step: 50
-    initial_value: 650
+    initial_value: 500
+    restore_value: true
+    optimistic: true
+    mode: box
+    entity_category: config
+
+  # Rise that counts as precipitation; also blocks the heater.
+  - platform: template
+    name: "Drizzle Detection"
+    id: rate_drizzle
+    unit_of_measurement: "pF/min"
+    min_value: 10
+    max_value: 500
+    step: 5
+    initial_value: 60
+    restore_value: true
+    optimistic: true
+    mode: box
+    entity_category: config
+
+  - platform: template
+    name: "Rain Detection"
+    id: rate_rain
+    unit_of_measurement: "pF/min"
+    min_value: 20
+    max_value: 1000
+    step: 10
+    initial_value: 150
+    restore_value: true
+    optimistic: true
+    mode: box
+    entity_category: config
+
+  # Drizzle and rain end after this long without a rise.
+  - platform: template
+    name: "Rain End After"
+    id: rain_end_min
+    unit_of_measurement: "min"
+    min_value: 1
+    max_value: 60
+    step: 1
+    initial_value: 7
     restore_value: true
     optimistic: true
     mode: box
@@ -403,8 +464,8 @@ sensor:
       if (isnan(id(brightness).state)) return NAN;
       return id(brightness).state * 0.01;
 
-  # HTU21D inside the enclosure: humidity is enclosure humidity (desiccant
-  # check), temperature approximates outdoor air for the undercooling fallback.
+  # HTU21D inside the enclosure: battery climate (no charging below 0 °C)
+  # and desiccant check.
   - platform: htu21d
     address: 0x40
     update_interval: 8s
@@ -496,21 +557,6 @@ sensor:
           send_every: 5
           send_first_at: 5
 
-  # Surface minus box temperature, dew fallback without a dew point.
-  - platform: template
-    name: "Undercooling"
-    entity_category: diagnostic
-    id: undercooling_k
-    unit_of_measurement: "K"
-    state_class: measurement
-    accuracy_decimals: 1
-    update_interval: 15s
-    lambda: |-
-      float ts = id(temp_smoothed).state;
-      float ta = id(box_temperature).state;
-      if (isnan(ts) || isnan(ta)) return NAN;
-      return ts - ta;
-
   # Oscillator frequency. Capacitance and rate are computed here so that the
   # rate uses the true sample spacing.
   - platform: pulse_counter
@@ -566,7 +612,7 @@ sensor:
     accuracy_decimals: 0
     update_interval: never
 
-  # Wetting in percent for display, points from the datasheet table (100 pF dry).
+  # Wetting in percent for display, points from RC-SPC1K datasheet table 1.
   - platform: copy
     source_id: capacitance
     name: "Wetness"
@@ -580,9 +626,10 @@ sensor:
           //                pF     %
           static const float P[][2] = {
             { 100.0f,   0.0f },   // dry
-            { 320.0f,  25.0f },
-            { 450.0f,  40.0f },
-            {3000.0f, 100.0f },
+            { 180.0f,  25.0f },
+            { 280.0f,  40.0f },
+            { 390.0f,  50.0f },
+            { 550.0f, 100.0f },
           };
           const int N = sizeof(P) / sizeof(P[0]);
           if (isnan(x)) return NAN;
@@ -605,7 +652,7 @@ sensor:
     accuracy_decimals: 0
     update_interval: never
     filters:
-      # One raw value per 10 s; 1 min mean (noise ~+-20 -> ~+-8).
+      # One raw value per 10 s; 1 min mean.
       - sliding_window_moving_average:
           window_size: 6
           send_every: 1
@@ -673,7 +720,8 @@ sensor:
   - platform: template
     name: "Distance to Dew Point"
     entity_category: diagnostic
-    unit_of_measurement: "K"
+    unit_of_measurement: "°C"
+    device_class: temperature_delta
     state_class: measurement
     accuracy_decimals: 1
     update_interval: 15s
@@ -697,6 +745,63 @@ sensor:
     name: "Uptime"
     entity_category: diagnostic
 
+  # Optional weather modules, prepared on the board but untested: uncomment
+  # and check address/pins. Expansion header J8: IO32, IO33, IO26, IO27, IO14, IO4.
+  #
+  # # Pressure, temperature, humidity (I2C 0x76; BMP280: bmp280_i2c).
+  # - platform: bme280_i2c
+  #   address: 0x76
+  #   update_interval: 8s
+  #   temperature:
+  #     name: "Outdoor Temperature"
+  #   pressure:
+  #     name: "Pressure"
+  #   humidity:
+  #     name: "Outdoor Humidity"
+  #
+  # # UV (I2C 0x53).
+  # - platform: ltr390
+  #   address: 0x53
+  #   update_interval: 8s
+  #   uv_index:
+  #     name: "UV Index"
+  #
+  # # Cup anemometer, reed contact to GND (2.4 km/h per pulse/s is common).
+  # - platform: pulse_counter
+  #   pin:
+  #     number: GPIO27
+  #     mode: INPUT_PULLUP
+  #   name: "Wind"
+  #   unit_of_measurement: "km/h"
+  #   update_interval: 10s
+  #   filters:
+  #     - multiply: 0.04   # pulses/min -> km/h
+  #
+  # # Wind vane (resistor network to GND, pull-up to 3V3): raw voltage, map it
+  # # to directions for your vane. ADC1 pin, so it works with WiFi.
+  # - platform: adc
+  #   pin: GPIO33
+  #   name: "Wind Vane Voltage"
+  #   attenuation: 12db
+  #   update_interval: 10s
+  #
+  # # Tipping bucket, reed contact to GND (0.2794 mm per tip is common).
+  # # Tips during night-mode sleep are lost: do not combine with night mode.
+  # - platform: pulse_counter
+  #   pin:
+  #     number: GPIO26
+  #     mode: INPUT_PULLUP
+  #   name: "Rain Rate"
+  #   unit_of_measurement: "mm/h"
+  #   update_interval: 60s
+  #   filters:
+  #     - multiply: 16.764  # tips/min -> mm/h
+  #   total:
+  #     name: "Rain Amount"
+  #     unit_of_measurement: "mm"
+  #     filters:
+  #       - multiply: 0.2794
+
 
 binary_sensor:
   - platform: template
@@ -708,11 +813,12 @@ binary_sensor:
       return id(g_humid);
 
   # Follows the rain latch, not the raw threshold: heavy dew reaches the same
-  # capacitance as rain.
+  # capacitance as rain. Stays on during the heater test after a rain end,
+  # so steady rain does not report a false end.
   - platform: template
     name: "Rain"
     device_class: moisture
-    lambda: 'return id(g_rain);'
+    lambda: 'return id(g_rain) || id(g_rain_ended);'
 
   - platform: template
     name: "Heating Lockout Active"
@@ -757,15 +863,15 @@ switch:
 
 
 text_sensor:
-  # Weather state. Capacitance says how wet, dew point and rate say why:
+  # Weather state. Capacitance says how wet, rate and dew point say why:
   #   dry       below the display threshold
-  #   humid     thin film, no dew, not growing
+  #   humid     thin film, not growing
   #   wet       wet surface, not growing (also right after rain)
-  #   Dew       surface at or below the dew point, above 0 C
-  #             (Morning Dew 04-11 h, Evening Dew 17-23 h)
-  #   Frost     same, at or below 0 C
-  #   Drizzle   wet and growing
-  #   Rain      rain latch
+  #   Drizzle   precipitation latch below rain
+  #   Rain      rain latch, or drying after a rain end at rain level
+  #   Dew       surface at or below the dew point (without one: slow wetting
+  #             in the dark), above 0 °C (Morning Dew 04-11 h, Evening Dew 17-23 h)
+  #   Frost     same, at or below 0 °C
   - platform: template
     name: "Weather State"
     icon: mdi:weather-partly-rainy
@@ -774,31 +880,30 @@ text_sensor:
       float c  = id(capacitance).state;
       float sa = id(threshold_display).state;
       float sf = id(threshold_humid).state;
-      float sr = id(threshold_rain).state;
-      if (isnan(c) || isnan(sf) || isnan(sr)) return {"unknown"};
+      // No value yet (boot, wake from night mode): keep the last state.
+      if (isnan(c) || isnan(sf)) return {};
       // Display threshold above the heating threshold: only sf applies.
       if (isnan(sa) || sa > sf) sa = sf;
 
-      float r  = id(capacitance_rate).state;
-      float dp = id(g_dew_point_distance);
-      float ts = id(temp_smoothed).state;
-
-      // The rain latch is kept by the control loop, only read here.
+      // Latches are kept by the control loop, only read here.
       id(g_display) = id(g_display) ? c >= sa * ${hyst_factor} : c >= sa;
-      if (id(g_rain) || !id(g_display)) id(g_dew) = false;
-      if (id(g_rain)) return {"Rain"};
-      if (!id(g_display))  return {"dry"};
+      bool rain = id(g_rain) || id(g_rain_ended);
+      if (rain || id(g_drizzle) || !id(g_display)) id(g_dew) = false;
+      if (rain)        return {"Rain"};
+      if (!id(g_display))   return {"dry"};
+      if (id(g_drizzle)) return {"Drizzle"};
 
       // Dew from the threshold down.
-      bool dew = false;
+      float dp = id(g_dew_point_distance);
+      float ts = id(temp_smoothed).state;
+      bool dew;
       if (!isnan(dp)) {
         float st = id(threshold_dew).state;
         dew = id(g_dew) ? dp <= st + ${hyst_dew} : dp <= st;
       } else {
-        // Fallback: much colder than air and dark = radiative cooling.
-        float u   = id(undercooling_k).state;
+        // Fallback: slow wetting (no precipitation latch) in the dark.
         float lux = id(brightness).state;
-        dew = !isnan(u) && u < ${undercooling} && !isnan(lux) && lux < ${lux_night};
+        dew = !isnan(lux) && lux < ${lux_night};
       }
       id(g_dew) = dew;
       if (dew) {
@@ -813,10 +918,8 @@ text_sensor:
       // float ta = NAN, rh = NAN;
       // if (id(g_push_stamp) != 0 && (millis() - id(g_push_stamp)) < ${outdoor_valid_ms}) { ta = id(g_push_temp); rh = id(g_push_rh); }
       // if (isnan(ta) || isnan(rh)) { ta = id(outdoor_temperature).state; rh = id(outdoor_humidity).state; }
-      // if (!isnan(ta) && !isnan(rh) && !isnan(ts) && rh >= 97.0f && fabsf(ts - ta) < 1.0f && (isnan(r) || r < ${rate_growing})) return {"Fog"};
+      // if (!isnan(ta) && !isnan(rh) && !isnan(ts) && rh >= 97.0f && fabsf(ts - ta) < 1.0f) return {"Fog"};
 
-      id(g_drizzle) = !isnan(r) && r > (id(g_drizzle) ? ${rate_growing} * 0.67f : (float) ${rate_growing});
-      if (id(g_drizzle)) return {"Drizzle"};
       return id(g_humid) ? std::string("wet") : std::string("humid");
 
   - platform: version
@@ -826,8 +929,8 @@ text_sensor:
 
 
 # Control loop every second (the heater raises the surface ~0.7 K/s).
-# Order: 0a rain latch, 0b elapsed time, 1 safety cut-off, 2 manual mode,
-# 3 wet state, 4 heating limit, 5 hysteresis, 6 switch.
+# Order: 0a precipitation latches, 0b elapsed time, 1 safety cut-off,
+# 2 manual mode, 3 wet state, 4 heating limit, 5 heater test, 6 switch.
 interval:
   - interval: 1s
     then:
@@ -836,24 +939,58 @@ interval:
           bool  heater_on = id(heater).state;
           float c  = id(capacitance).state;
           float sr = id(threshold_rain).state;
+          auto  now = id(ha_time).now();
 
-          // 0a) Rain latch. Level alone cannot separate rain from dew (dense
-          // condensate reaches the same capacitance, observed 678 pF at 0.5 K
-          // below the dew point), but dew grows ~100x slower and only at or
-          // below the dew point. Once set it holds until the level falls
-          // clearly below the threshold. Without a valid dew point only a fast
-          // rise counts. Runs first so it also runs in manual mode.
+          // 0a) Precipitation latches. Level alone cannot separate rain from
+          // dew (dense condensate reaches rain levels), but precipitation
+          // rises ~100x faster and dew forms only at or below the dew point.
+          //   Drizzle: rise >= "Drizzle Detection".
+          //   Rain:    rain level plus a rise >= "Rain Detection", or a
+          //            surface clearly above the dew point.
+          // Both end when the rate stays below rate_steady for
+          // "Rain End After" (the heater then dries the surface) or when the
+          // level falls back.
+          // Runs first so it also runs in manual mode.
           if (!isnan(c) && !isnan(sr)) {
-            if (c >= sr) {
-              if (!id(g_rain)) {
-                float rr = id(capacitance_rate).state;
-                float dp = id(g_dew_point_distance);
-                bool fast   = !isnan(rr) && rr >= ${rate_rain};
-                bool above_dew = !isnan(dp) && dp >  0.5f;
-                if (fast || above_dew) id(g_rain) = true;
+            float rr = id(capacitance_rate).state;
+            float rn = id(rate_drizzle).state;
+            float rg = id(rate_rain).state;
+            float dp = id(g_dew_point_distance);
+            float sa = id(threshold_display).state;
+
+            bool latched_before = id(g_drizzle) || id(g_rain);
+            if (!isnan(rr) && !isnan(rn) && rr >= rn) id(g_drizzle) = true;
+            if (c >= sr && !id(g_rain)) {
+              bool fast   = !isnan(rr) && !isnan(rg) && rr >= rg;
+              bool above_dew = !isnan(dp) && dp > 0.5f;
+              // After a rain end only a new fast rise counts.
+              if (fast || (above_dew && !id(g_rain_ended))) {
+                id(g_rain) = true;
+                id(g_rain_ended) = false;
               }
-            } else if (c < sr * 0.9f) {
+            }
+
+            if (c < sr * 0.9f) {
               id(g_rain) = false;
+              id(g_rain_ended) = false;
+            }
+            if (!isnan(sa) && c < sa) id(g_drizzle) = false;
+            // A new latch starts a new steady period.
+            if (!latched_before && (id(g_drizzle) || id(g_rain))) id(g_steady_since) = 0;
+
+            // Steady level (needs the clock, works across night-mode sleep).
+            if (!isnan(rr) && now.is_valid()) {
+              uint32_t since = id(g_steady_since);
+              float end_min = id(rain_end_min).state;
+              if (rr >= ${rate_steady}) {
+                id(g_steady_since) = 0;
+              } else if (since == 0 || now.timestamp < since) {
+                id(g_steady_since) = now.timestamp;
+              } else if (!isnan(end_min) && now.timestamp - since >= (uint32_t)(end_min * 60.0f)) {
+                if (id(g_rain)) id(g_rain_ended) = true;
+                id(g_rain)  = false;
+                id(g_drizzle) = false;
+              }
             }
           }
 
@@ -867,7 +1004,6 @@ interval:
           // mode this loop stalls (35 s awake per 5 min). Without a clock
           // it falls back to one second per run.
           float dt = 1.0f;
-          auto  now = id(ha_time).now();
           if (now.is_valid()) {
             uint32_t now_ts = now.timestamp;
             uint32_t prev_ts = id(g_account_stamp);
@@ -883,7 +1019,7 @@ interval:
           float recovery_min = id(recovery).state;
           if (isnan(recovery_min) || recovery_min < 1.0f) recovery_min = 1.0f;
           if (heater_on) id(g_heat_sec) += dt;
-          else    id(g_heat_sec) -= dt / recovery_min;
+          else         id(g_heat_sec) -= dt / recovery_min;
           if (id(g_heat_sec) < 0.0f) id(g_heat_sec) = 0.0f;
 
           if (id(g_lockout_sec) > 0 && dt >= 1.0f) {
@@ -907,18 +1043,16 @@ interval:
           // limit; the temperature cut-off above still applies).
           if (!id(auto_mode).state) return;
 
-          // 3) Wet state.
-          float sf = id(threshold_humid).state;
-          if (isnan(c) || isnan(sf) || isnan(sr)) {
+          // 3) Heat when wet, never during precipitation (the sensor has to
+          // see it, and the heater cannot keep up with rain).
+          if (isnan(c) || isnan(sr) || isnan(sfh)) {
             if (heater_on) id(heater).turn_off();
             return;
           }
-          bool humid = id(g_humid);
-          // Latch instead of raw threshold: heat on heavy dew, not on rain.
-          bool rain  = id(g_rain);
+          bool desired = id(g_humid) && !id(g_rain) && !id(g_drizzle);
 
-          // 4) Heating limit: in fog/drizzle the surface gets wet faster than
-          // it dries. Exceeding the maximum triggers a fixed pause.
+          // 4) Heating limit: in fog the surface gets wet faster than it
+          // dries. Exceeding the maximum triggers a fixed pause.
           float maxd = id(max_heat_duration).state;
           float cooldown_min = id(cooldown).state;
           if (!isnan(maxd) && !isnan(cooldown_min) &&
@@ -927,14 +1061,28 @@ interval:
           }
           if (id(g_lockout_sec) > 0) {
             if (heater_on) id(heater).turn_off();
+            id(g_drying_sec) = 0.0f;
             return;
           }
 
-          // 5) Hysteresis: hold state between the thresholds.
-          if (t > ${temp_on}) return;
+          // 5) Heater test after a rain end: still at the rain level after
+          // rain_heater_test seconds of drying = it is still raining.
+          if (desired && id(g_rain_ended)) {
+            id(g_drying_sec) += dt;
+            if (c >= sr && id(g_drying_sec) >= ${rain_heater_test}) {
+              id(g_rain) = true;
+              id(g_rain_ended) = false;
+              id(g_steady_since) = 0;
+              desired = false;
+            }
+          } else {
+            id(g_drying_sec) = 0.0f;
+          }
 
-          // 6) Heat when wet and not raining; switch only on change.
-          bool desired = humid && !rain;
+          // 6) Switch on change. Temperature hysteresis: after the cut-off,
+          // switch on again only at or below temp_on; switching off is
+          // never delayed.
+          if (desired && !heater_on && t > ${temp_on}) return;
           if (desired != heater_on) {
             if (desired) id(heater).turn_on();
             else      id(heater).turn_off();
