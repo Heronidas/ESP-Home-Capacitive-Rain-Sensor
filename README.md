@@ -138,8 +138,6 @@ The element alone does nothing. This project adds the rest: a board that reads i
 
 **Measurement.** The sensing capacitor sets the frequency of a relaxation oscillator (SN74HC14 with R1 = 220 kΩ). A wetter surface means a larger capacitance and a lower frequency. The ESP32 counts the pulses with its hardware PCNT peripheral, which is far quieter than software counting. You measure your dry sensor once and enter the result as the dry frequency. That value defines 100 pF; everything else scales from it (`C = f_dry × 100 / f`), so cable length and layout drop out of the calibration.
 
-R1 only sets the frequency range, not the pF values. With 1 MΩ, a water film leaked enough current to stop the oscillator in rain; 220 kΩ keeps it running up to a soaked surface.
-
 **Rain or dew.** Capacitance says *how* wet, not *why*. Heavy dew reaches the same values as light rain, and the element already reacts to humid air before any liquid water is present. The firmware therefore adds two criteria:
 
 | Criterion | Rain / drizzle | Dew |
@@ -353,7 +351,7 @@ Both ways are optional. Without outdoor data the firmware uses the fallback (slo
 | Symptom | Cause |
 |---|---|
 | Capacitance unknown | *Dry Frequency* not set, or no oscillator signal |
-| Frequency 0 | Oscillator stopped: OSC wire, GND, or R1 too large (1 MΩ stops on a wet surface). Reported as wet. |
+| Frequency 0 | Oscillator stopped: OSC wire, GND or R1. Reported as wet. |
 | Frequency jumps | I2C crosstalk (already median-filtered), weak GND at sensor pin 1, very long cable |
 | Surface temperature NaN, heater never runs | Implausible NTC resistance (open or shorted): check the SENSOR terminal. Deliberate: the heater stays off. |
 | Humid nights read wet or dew | Display threshold too low (calibration step 5), or *Dew Threshold* too high |

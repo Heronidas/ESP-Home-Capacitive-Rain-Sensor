@@ -88,7 +88,7 @@ li { margin-bottom: 1mm; }
   <tr><td class="num">1</td><td>ESP32 dev board (ESP32-WROOM-32, 30 or 38 pin)</td><td>GPIO 13, 21, 22, 25, 34, 35 must be broken out. On-board 3.3 V regulator and USB.</td></tr>
   <tr><td class="num">1</td><td>RC-SPC1KA rain sensor (Radiocontrolli)</td><td>Capacitor, heater and NTC on one element. See README for sources.</td></tr>
   <tr><td class="num">1</td><td>SN74HC14N, DIP-14, with socket</td><td>Hex Schmitt-trigger inverter. Use the HC type at 3.3 V.</td></tr>
-  <tr><td class="num">1</td><td>Resistor 220 kΩ (R1)</td><td>Oscillator. Do not use 1 MΩ: a wet surface stops the oscillator.</td></tr>
+  <tr><td class="num">1</td><td>Resistor 220 kΩ (R1)</td><td>Oscillator.</td></tr>
   <tr><td class="num">2</td><td>Resistor 5.6 kΩ (R2), in parallel</td><td>Gives 2.8 kΩ NTC pull-up. A single 2.7 kΩ also works.</td></tr>
   <tr><td class="num">1</td><td>Resistor 100 Ω (R3)</td><td>MOSFET gate resistor.</td></tr>
   <tr><td class="num">1</td><td>Resistor 100 kΩ (R4)</td><td>Gate pull-down: heater stays off while the ESP32 boots.</td></tr>
@@ -251,7 +251,7 @@ li { margin-bottom: 1mm; }
 <div class="keep"><h3>Troubleshooting</h3>
 <table>
   <tr><th>Symptom</th><th>Likely cause</th></tr>
-  <tr><td>Frequency 0</td><td>74HC14 not powered, OSC open, R1 missing, or R1 far too large (1 MΩ stops on a wet surface)</td></tr>
+  <tr><td>Frequency 0</td><td>74HC14 not powered, OSC open, R1 missing or wrong value</td></tr>
   <tr><td>Frequency jumps or noisy</td><td>Unused 74HC14 inputs floating, missing C1, poor GND at sensor pin 1, OSC routed next to 12 V</td></tr>
   <tr><td>Surface temperature NaN, heater never runs</td><td>NTC open or shorted; the firmware blocks the heater on purpose</td></tr>
   <tr><td>Heater does not heat</td><td>MOSFET not logic-level (e.g. IRF520), boost not at 12 V, drain and source swapped</td></tr>
