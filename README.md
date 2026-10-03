@@ -161,7 +161,7 @@ Safety: off at 45 °C surface temperature, back on below 40 °C, checked every s
 
 - The carrier board, assembled by JLCPCB ([Ordering](#ordering-at-jlcpcb)); screw terminals and pin headers are hand-soldered
 - RC-SPC1KA
-- 5 V supply, 1.5 A or more. The heater draws about 0.8 A at 5 V (estimated from 3.4 W plus boost losses, not measured). Developed with the Waveshare Solar Power Manager (D).
+- 5 V supply, 1.5 A or more. The heater draws about 0.8 A at 5 V (estimated from 3.4 W plus boost losses, not measured). Tested with the Waveshare Solar Power Manager (D).
 - USB-UART adapter with 3.3 V logic for the first flash; updates then go over Wi-Fi
 - Optional: VEML7700 light sensor (I2C 0x10), HTU21D (GY-21) inside the enclosure
 - Cable to the sensor head (the prototype uses 8-core), IP67 enclosure with desiccant. Keep metal and enclosure walls away from the antenna at the board's top edge.
@@ -282,7 +282,7 @@ The SMD parts on the board are too small for most people to solder by hand, so t
 
 1. **Dry frequency.** Surface dry, heater off. Average *Frequency* over a few minutes and enter it as *Dry Frequency*. The YAML default (13549 Hz) is only a placeholder from the vendor example.
 2. **NTC.** Reference thermometer next to the head, same air, no sun, heater off for 30 min. Trim with `adc_faktor` (coarse) or *NTC Offset* (fine, ±5 K). Do not calibrate against air temperature under a clear night sky: the plate is legitimately colder, which is the dew signal.
-3. **Thresholds.** Defaults: display 110 pF, heating 200 pF, rain 500 pF. They come from the prototype (R1 = 220 kΩ):
+3. **Thresholds.** Defaults: display 110 pF, heating 200 pF, rain 500 pF. Measured values:
 
    | Condition | Capacitance |
    |---|---|

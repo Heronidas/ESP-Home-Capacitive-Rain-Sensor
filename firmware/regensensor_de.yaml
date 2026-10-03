@@ -219,7 +219,7 @@ globals:
 
 
 # Runtime thresholds; initial_value applies only on the first boot.
-# Start values from the prototype (R1 220k): dry 100, dewy night up to ~120,
+# Start values from measurements: dry 100, dewy night up to ~120,
 # mist ~270, three drops ~290, heavy spray ~600, soaked cloth 870-1240 pF.
 # The sensor reacts to humid air before water lies on it: keep the display
 # threshold above the maximum of a dry, humid night.

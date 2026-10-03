@@ -12,8 +12,6 @@ subprocess.run(["kicad-cli","pcb","export","gerbers","--layers",layers,"--no-x2"
 subprocess.run(["kicad-cli","pcb","export","drill","--format","excellon","--drill-origin","plot","--excellon-separate-th","--generate-map","--map-format","gerberx2","-o",f"{out}/gerbers/",pcb],check=True)
 b = pcbnew.LoadBoard(pcb)
 # Most specific pattern first; the loop below stops at the first match.
-# Bug fixed 2026-09-28: "^SOT-23" also matched "SOT-23-5/-6" (both rules
-# fired, 180+90=270 instead of one), so U2/U3 came out wrong in the CPL.
 ROT = [(r"^SOT-23-[56]", 90), (r"^SOT-23$", 180), (r"^SOIC-", 270), (r"^ESP32", 270)]
 NO_ASSY = {"J1","J2","J3","J6","J4","J7","J8"}  # through-hole parts: hand-solder
 rows = {}; cpl = []
