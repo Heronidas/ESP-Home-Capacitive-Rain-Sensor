@@ -302,4 +302,4 @@ If this project saved you some time, you can support it on Ko-fi. Not required, 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/heronidas)
 
 ## License
-Free for private and non-commercial use; commercial use only with written permission. Hardware, fabrication files, holder and docs: CC BY-NC-SA 4.0. Firmware, blueprint and tools: PolyForm Noncommercial 1.0.0. See `LICENSE.md`.
+Free for private and non-commercial use; commercial use only with written permission (commercial licenses on request, see `LICENSE.md`). Hardware, fabrication files, holder and docs: CC BY-NC-SA 4.0. Firmware, blueprint and tools: PolyForm Noncommercial 1.0.0. See `LICENSE.md`.
