@@ -114,7 +114,7 @@ This project takes a different approach:
 
 ## 🚀 Quick start
 
-1. **Get the parts.** Order the assembled board ([Ordering](#ordering-at-jlcpcb)) and an RC-SPC1KA ([The sensor](#-the-sensor)). Alternatively, [build it on perfboard](#building-without-the-pcb).
+1. **Get the parts.** Order the assembled board ([Ordering](#ordering-at-jlcpcb)) and an RC-SPC1KA ([The sensor](#-the-sensor)). Alternatively, build it from modules on perfboard with the [Module Build Guide (PDF)](docs/module-build-guide.pdf).
 2. **Wire it.** Connect the sensor to the SENSOR and HEATER terminals ([Wiring](#wiring)) and 5 V to POWER IN.
 3. **Flash.** First flash over the UART header, then OTA ([Flashing](#flashing)).
 4. **Calibrate.** Enter the dry frequency, check the thresholds ([Calibration](#-calibration)).
@@ -135,16 +135,6 @@ The element alone does nothing. This project adds the rest: a board that reads i
 ---
 
 ## 🧠 How it works
-
-```mermaid
-flowchart LR
-    S[RC-SPC1KA<br>sensing capacitor] --> O[74HC14<br>relaxation oscillator]
-    O -- frequency --> P[ESP32<br>hardware pulse counter]
-    P --> C[capacitance<br>C = f_dry × 100 / f]
-    C --> L{rate of rise,<br>dew point,<br>thresholds}
-    L --> W[weather state]
-    L --> H[heater]
-```
 
 **Measurement.** The sensing capacitor sets the frequency of a relaxation oscillator (SN74HC14 with R1 = 220 kΩ). A wetter surface means a larger capacitance and a lower frequency. The ESP32 counts the pulses with its hardware PCNT peripheral, which is far quieter than software counting. You measure your dry sensor once and enter the result as the dry frequency. That value defines 100 pF; everything else scales from it (`C = f_dry × 100 / f`), so cable length and layout drop out of the calibration.
 
@@ -217,8 +207,10 @@ For the dew point, set your outdoor sensors in the substitutions (`aussen_temp_e
 
 ### Building without the PCB
 
+The step-by-step **[Module Build Guide (PDF)](docs/module-build-guide.pdf)** covers this build in full: parts list, circuit, wiring, checks and function test.
+
 <details>
-<summary>Perfboard build from ready-made modules (like the prototype)</summary>
+<summary>Short version</summary>
 
 The SMD parts on the board are too small for most people to solder by hand, so the options are the assembled board from JLCPCB or a perfboard build. The circuit is small; pins match the GPIO map in the [hardware reference](#-hardware-reference), so the firmware runs unchanged.
 
@@ -463,7 +455,7 @@ IO32 doubles as the alternative NTC pull-up drive (see solder jumpers). The expa
 | `hardware/` | KiCad project (schematic, PCB) |
 | `fabrication/` | Gerbers, drill files, JLCPCB BOM and CPL |
 | `mechanical/` | Sensor holder STL |
-| `docs/` | Images |
+| `docs/` | Images, Module Build Guide (PDF) and its source (`docs/build-guide/`) |
 | `tools/` | Python scripts (KiCad 7 `pcbnew`) generating schematic, PCB and fabrication files from `design.py` |
 | `.github/workflows/fab.yml` | CI: DRC and Gerber export |
 

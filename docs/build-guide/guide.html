@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Module Build Guide – ESPHome Capacitive Rain Sensor</title>
+<style>
+@font-face { font-family: "Poppins"; src: url("file:///usr/share/fonts/truetype/google-fonts/Poppins-SemiBold.ttf"); font-weight: 600; }
+@font-face { font-family: "Poppins"; src: url("file:///usr/share/fonts/truetype/google-fonts/Poppins-Medium.ttf"); font-weight: 500; }
+@page { size: A4; margin: 18mm 17mm 20mm 17mm; }
+:root { --ink:#0f172a; --muted:#475569; --line:#cbd5e1; --soft:#f1f5f9; --accent:#1d4ed8; --warn:#b45309; --warnbg:#fff7ed; --danger:#b91c1c; --dangerbg:#fef2f2; }
+* { box-sizing: border-box; }
+body { font-family: "DejaVu Sans", sans-serif; font-size: 9.6pt; line-height: 1.45; color: var(--ink); margin: 0; }
+h1, h2, h3 { font-family: "Poppins", "DejaVu Sans", sans-serif; color: var(--ink); line-height: 1.2; }
+h1 { font-size: 26pt; font-weight: 600; margin: 0 0 4mm; }
+h2 { font-size: 14pt; font-weight: 600; margin: 7mm 0 3mm; padding-bottom: 1.5mm; border-bottom: 1.5px solid var(--ink); break-after: avoid; }
+h3 { font-size: 11pt; font-weight: 500; margin: 5mm 0 2mm; break-after: avoid; }
+p { margin: 0 0 2.5mm; }
+code { font-family: "DejaVu Sans Mono", monospace; font-size: 8.6pt; background: var(--soft); padding: 0.2mm 1mm; border-radius: 1mm; }
+table { width: 100%; border-collapse: collapse; margin: 1mm 0 3.5mm; font-size: 8.8pt; break-inside: avoid; }
+th { text-align: left; background: var(--soft); font-weight: bold; border-bottom: 1.2px solid var(--ink); padding: 1.6mm 2mm; }
+td { border-bottom: 0.6px solid var(--line); padding: 1.4mm 2mm; vertical-align: top; }
+tr { break-inside: avoid; }
+.num { text-align: center; width: 9mm; }
+ul, ol { margin: 0 0 3mm; padding-left: 6mm; }
+li { margin-bottom: 1mm; }
+.cover { height: 250mm; display: flex; flex-direction: column; break-after: page; }
+.kicker { font-family: "Poppins", sans-serif; font-weight: 500; color: var(--accent); letter-spacing: 0.08em; text-transform: uppercase; font-size: 9pt; margin-bottom: 3mm; }
+.lead { font-size: 11.5pt; color: var(--muted); max-width: 150mm; margin-bottom: 8mm; }
+.facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4mm; margin: 6mm 0 8mm; }
+.fact { border: 1px solid var(--line); border-radius: 2mm; padding: 3mm 4mm; }
+.fact b { display: block; font-family: "Poppins", sans-serif; font-weight: 600; font-size: 11pt; margin-bottom: 1mm; }
+.fact span { color: var(--muted); font-size: 8.8pt; }
+.figure { border: 1px solid var(--line); border-radius: 2mm; padding: 4mm; margin: 2mm 0 4mm; break-inside: avoid; }
+.figure img { display: block; margin: 0 auto; max-width: 100%; }
+.caption { color: var(--muted); font-size: 8.4pt; margin-top: 2mm; text-align: center; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 4mm; }
+.note, .warn, .danger { border-left: 3px solid var(--accent); background: #eff6ff; padding: 2.5mm 4mm; margin: 2mm 0 4mm; border-radius: 0 1.5mm 1.5mm 0; break-inside: avoid; }
+.warn { border-color: var(--warn); background: var(--warnbg); }
+.danger { border-color: var(--danger); background: var(--dangerbg); }
+.note b, .warn b, .danger b { display: block; margin-bottom: 0.8mm; }
+.steps { counter-reset: s; list-style: none; padding: 0; }
+.steps > li { counter-increment: s; position: relative; padding-left: 10mm; margin-bottom: 3mm; break-inside: avoid; }
+.steps > li::before { content: counter(s); position: absolute; left: 0; top: 0; width: 6.5mm; height: 6.5mm; border-radius: 50%; background: var(--ink); color: #fff; font-family: "Poppins", sans-serif; font-weight: 600; font-size: 9pt; text-align: center; line-height: 6.6mm; }
+.steps > li b.t { font-family: "Poppins", sans-serif; font-weight: 500; font-size: 10pt; }
+.check { color: #15803d; font-weight: bold; }
+.box { list-style: none; padding-left: 0; }
+.box li::before { content: "☐  "; }
+.muted { color: var(--muted); }
+.pb { break-before: page; }
+.keep { break-inside: avoid; }
+.foot { margin-top: auto; color: var(--muted); font-size: 8.4pt; border-top: 1px solid var(--line); padding-top: 3mm; }
+</style>
+</head>
+<body>
+
+<section class="cover">
+  <div class="kicker">ESPHome Capacitive Rain Sensor</div>
+  <h1>Module Build Guide</h1>
+  <p class="lead">Build the rain sensor from off-the-shelf modules on perfboard, without the custom PCB. The pinout matches the Rev A board, so the firmware runs unchanged.</p>
+
+  <div class="figure"><img src="overview.svg" style="width:100%"></div>
+  <div class="caption">System overview of the module build</div>
+
+  <div class="facts">
+    <div class="fact"><b>Through-hole only</b><span>DIP IC, standard resistors and ready-made modules. No SMD soldering.</span></div>
+    <div class="fact"><b>Same firmware</b><span>Identical GPIO map to the Rev A board. Flash over the dev board's USB port.</span></div>
+    <div class="fact"><b>Proven layout</b><span>This is how the prototype is built that the firmware was developed on.</span></div>
+  </div>
+
+  <h3>Contents</h3>
+  <ol>
+    <li>Parts and tools</li>
+    <li>Circuit</li>
+    <li>Pin map and wiring</li>
+    <li>Assembly</li>
+    <li>Checks, first power-up and flashing</li>
+    <li>Function test and troubleshooting</li>
+  </ol>
+
+  <div class="foot">Part of <b>Heronidas/esphome-capacitive-rain-sensor</b>. Calibration, Home Assistant setup and the sensor holder are covered in the repository README. Licensed CC BY-NC-SA 4.0. Revision 1, October 2026.</div>
+</section>
+
+<h2>1&nbsp;&nbsp;Parts and tools</h2>
+
+<div class="keep"><h3>Core parts</h3>
+<table>
+  <tr><th class="num">Qty</th><th>Part</th><th>Notes</th></tr>
+  <tr><td class="num">1</td><td>ESP32 dev board (ESP32-WROOM-32, 30 or 38 pin)</td><td>GPIO 13, 21, 22, 25, 34, 35 must be broken out. On-board 3.3 V regulator and USB.</td></tr>
+  <tr><td class="num">1</td><td>RC-SPC1KA rain sensor (Radiocontrolli)</td><td>Capacitor, heater and NTC on one element. See README for sources.</td></tr>
+  <tr><td class="num">1</td><td>SN74HC14N, DIP-14, with socket</td><td>Hex Schmitt-trigger inverter. Use the HC type at 3.3 V.</td></tr>
+  <tr><td class="num">1</td><td>Resistor 220 kΩ (R1)</td><td>Oscillator. Do not use 1 MΩ: a wet surface stops the oscillator.</td></tr>
+  <tr><td class="num">2</td><td>Resistor 5.6 kΩ (R2), in parallel</td><td>Gives 2.8 kΩ NTC pull-up. A single 2.7 kΩ also works.</td></tr>
+  <tr><td class="num">1</td><td>Resistor 100 Ω (R3)</td><td>MOSFET gate resistor.</td></tr>
+  <tr><td class="num">1</td><td>Resistor 100 kΩ (R4)</td><td>Gate pull-down: heater stays off while the ESP32 boots.</td></tr>
+  <tr><td class="num">2</td><td>Ceramic capacitor 100 nF (C1, C2)</td><td>74HC14 decoupling, NTC filter.</td></tr>
+  <tr><td class="num">1</td><td>Boost converter module MT3608 or XL6009</td><td>5 V in, adjusted to 12.0 V out. The heater draws about 0.3 A at 12 V.</td></tr>
+  <tr><td class="num">1</td><td>Logic-level N-MOSFET</td><td>IRLZ44N (TO-220), AO3400A on an adapter, or a ready-made AOD4184 (D4184) module. Not IRF520 modules: they need about 10 V at the gate.</td></tr>
+  <tr><td class="num">1</td><td>5 V power supply, 1.5 A or more</td><td>Feeds the ESP32 and the boost module.</td></tr>
+  <tr><td class="num">1</td><td>Perfboard, about 50 × 70 mm</td><td>Plus screw terminals (sensor, power), pin headers or sockets for the dev board.</td></tr>
+</table></div>
+
+<div class="keep"><h3>Optional</h3>
+<table>
+  <tr><th class="num">Qty</th><th>Part</th><th>Notes</th></tr>
+  <tr><td class="num">1</td><td>VEML7700 light sensor module (I2C 0x10)</td><td>Day/night for the dew logic. Sits in the sensor head.</td></tr>
+  <tr><td class="num">1</td><td>HTU21D module (GY-21, I2C 0x40)</td><td>Temperature and humidity inside the enclosure (battery climate, desiccant check).</td></tr>
+  <tr><td class="num">2</td><td>Resistor 100 kΩ (R5, R6)</td><td>Battery voltage divider for 1S Li-ion (up to 4.2 V).</td></tr>
+  <tr><td class="num">2</td><td>Resistor 4.7 kΩ</td><td>I2C pull-ups, only if none of your I2C modules has them. Most have.</td></tr>
+  <tr><td class="num">1</td><td>Outdoor cable, 8 cores</td><td>To the sensor head: 5 sensor lines plus 3 for the VEML7700 (GND shared).</td></tr>
+  <tr><td class="num">1</td><td>IP67 enclosure, desiccant, cable glands</td><td>For the electronics. Sensor holder STL: <code>mechanical/</code> in the repository.</td></tr>
+</table></div>
+
+<h3>Tools</h3>
+<p>Soldering iron and solder, multimeter, small screwdriver for the boost potentiometer, wire stripper, heat shrink. For mounting the sensor: neutral-curing adhesive (MS polymer) and Kapton tape.</p>
+
+<h2>2&nbsp;&nbsp;Circuit</h2>
+<p>Four small blocks, all referenced to a common ground. Labels such as <code>GPIO25</code> connect to the ESP32 pin of the same name.</p>
+
+<h3>Oscillator</h3>
+<div class="figure"><img src="osc.svg" style="width:82%"></div>
+<p>The sensor capacitor and R1 form a relaxation oscillator with one Schmitt-trigger inverter. A wetter surface means more capacitance and a lower frequency. The ESP32 counts the pulses in hardware (PCNT). The firmware computes the capacitance from the ratio to the dry frequency, so R1 and the cable drop out of the result.</p>
+
+<div class="grid2">
+  <div>
+    <h3>NTC (surface temperature)</h3>
+    <div class="figure"><img src="ntc.svg" style="width:88%"></div>
+  </div>
+  <div>
+    <h3>Heater driver</h3>
+    <div class="figure"><img src="heater.svg" style="width:88%"></div>
+  </div>
+</div>
+
+<div class="grid2">
+  <div>
+    <h3>12 V supply for the heater</h3>
+    <div class="figure"><img src="power.svg" style="width:100%"></div>
+    <p class="muted">Boost modules without an enable pin run permanently. Fine on mains power; for battery operation the Rev A board is the better choice, as it switches the converter off.</p>
+  </div>
+  <div>
+    <h3>Battery voltage (optional)</h3>
+    <div class="figure"><img src="batt.svg" style="width:58%"></div>
+    <p class="muted">Leave out if there is no battery. The firmware divider factor is 2.0 (<code>batt_teiler_faktor</code>).</p>
+  </div>
+</div>
+
+<h2>3&nbsp;&nbsp;Pin map and wiring</h2>
+
+<div class="keep"><h3>ESP32</h3>
+<table>
+  <tr><th>ESP32 pin</th><th>Connects to</th><th>Function</th></tr>
+  <tr><td><code>GPIO25</code></td><td>74HC14 pin 2</td><td>Oscillator output, pulse counter input</td></tr>
+  <tr><td><code>GPIO34</code></td><td>NTC divider node</td><td>Surface temperature (ADC, input only)</td></tr>
+  <tr><td><code>GPIO13</code></td><td>MOSFET gate via R3</td><td>Heater on/off</td></tr>
+  <tr><td><code>GPIO21</code> / <code>GPIO22</code></td><td>I2C SDA / SCL</td><td>VEML7700, HTU21D (optional)</td></tr>
+  <tr><td><code>GPIO35</code></td><td>Battery divider node</td><td>Battery voltage (optional, input only)</td></tr>
+  <tr><td><code>3V3</code></td><td>74HC14 pin 14, R2, I2C modules</td><td>Logic supply. Never 5 V to the 74HC14.</td></tr>
+  <tr><td><code>5V</code> / <code>VIN</code></td><td>5 V supply</td><td>Board supply, also feeds the boost module</td></tr>
+  <tr><td><code>GND</code></td><td>common ground</td><td>All modules share one ground</td></tr>
+</table></div>
+
+<div class="keep"><h3>RC-SPC1KA sensor</h3>
+<table>
+  <tr><th>Sensor pin</th><th>Connects to</th><th>Group</th></tr>
+  <tr><td>6</td><td>74HC14 pin 1 (OSC)</td><td>Capacitor, oscillator node</td></tr>
+  <tr><td>1</td><td>GND</td><td>Capacitor, ground side (outer electrode)</td></tr>
+  <tr><td>3</td><td>NTC divider node (GPIO34)</td><td>NTC</td></tr>
+  <tr><td>4</td><td>GND</td><td>NTC</td></tr>
+  <tr><td>5</td><td>Boost OUT+ (12 V)</td><td>Heater</td></tr>
+  <tr><td>2</td><td>MOSFET drain</td><td>Heater, switched ground</td></tr>
+</table></div>
+<p>Pins 1 and 4 are separate on the sensor and only joined at GND on your board. Use the pin numbers from the RC-SPC1KA datasheet; cable colours vary.</p>
+
+<div class="keep"><h3>Complete connection list</h3>
+<table>
+  <tr><th>From</th><th>To</th></tr>
+  <tr><td>74HC14 pin 14</td><td>3.3 V, 100 nF (C1) to GND right at the socket</td></tr>
+  <tr><td>74HC14 pin 7</td><td>GND</td></tr>
+  <tr><td>74HC14 pins 3, 5, 9, 11, 13</td><td>GND (unused inputs must not float)</td></tr>
+  <tr><td>74HC14 pin 2</td><td>GPIO25</td></tr>
+  <tr><td>R1 220 kΩ</td><td>between 74HC14 pin 1 and pin 2</td></tr>
+  <tr><td>74HC14 pin 1</td><td>sensor pin 6 (OSC terminal)</td></tr>
+  <tr><td>R2 2.8 kΩ</td><td>3.3 V to the NTC node</td></tr>
+  <tr><td>NTC node</td><td>GPIO34, sensor pin 3, C2 100 nF to GND</td></tr>
+  <tr><td>Sensor pins 1 and 4</td><td>GND</td></tr>
+  <tr><td>Boost IN+ / IN−</td><td>5 V / GND</td></tr>
+  <tr><td>Boost OUT+</td><td>sensor pin 5 (12 V terminal)</td></tr>
+  <tr><td>Boost OUT−</td><td>GND</td></tr>
+  <tr><td>MOSFET drain / source</td><td>sensor pin 2 / GND</td></tr>
+  <tr><td>MOSFET gate</td><td>GPIO13 via R3 100 Ω; R4 100 kΩ from gate to GND</td></tr>
+  <tr><td>I2C modules</td><td>3.3 V, GND, SDA → GPIO21, SCL → GPIO22</td></tr>
+  <tr><td>Battery + (optional)</td><td>R5 100 kΩ to GPIO35, R6 100 kΩ from GPIO35 to GND</td></tr>
+</table></div>
+
+<div class="danger"><b>OSC must never touch 12 V.</b>The oscillator node and GPIO25 are 3.3 V logic. Keep the 12 V and HEAT− wires physically apart from OSC, on the board and in the cable.</div>
+
+<h2>4&nbsp;&nbsp;Assembly</h2>
+<ol class="steps">
+  <li><b class="t">Set the boost module to 12 V first.</b><br>Power it from 5 V without load and turn the potentiometer until the output reads 12.0 V. Many modules ship at a much higher voltage. Only then wire it into the circuit.</li>
+  <li><b class="t">Plan the layout.</b><br>Place the dev board on headers or sockets so it stays removable. Put the 74HC14 close to the sensor terminal, and keep the OSC trace short. Keep the boost module and the heater wiring on the far side from the oscillator.</li>
+  <li><b class="t">Oscillator.</b><br>Solder the DIP socket. C1 goes directly between pins 14 and 7. Tie pins 3, 5, 9, 11 and 13 to GND. Fit R1 between pins 1 and 2, run pin 2 to GPIO25 and pin 1 to the OSC terminal.</li>
+  <li><b class="t">NTC divider.</b><br>R2 (two 5.6 kΩ in parallel) from 3.3 V to the NTC node. C2 from the node to GND. Connect the node to GPIO34 and to the NTC terminal.</li>
+  <li><b class="t">Heater driver.</b><br>MOSFET source to GND, drain to the HEAT− terminal. R3 from GPIO13 to the gate, R4 from gate to GND. If you use a ready-made MOSFET module, it usually includes both resistors.</li>
+  <li><b class="t">Power.</b><br>5 V to the dev board's 5V/VIN pin and to the boost IN+. Boost OUT+ to the 12 V terminal. Join all grounds at one point.</li>
+  <li><b class="t">Optional parts.</b><br>I2C header or terminal (3.3 V, GND, GPIO21, GPIO22), battery divider on GPIO35.</li>
+  <li><b class="t">Sensor cable.</b><br>Solder the cable to the sensor and test it before gluing the sensor into its holder; afterwards nothing can be reworked. Insulate the solder pads on the back (Kapton tape). The back of the element is not corrosion-protected.</li>
+</ol>
+
+<div class="note"><b>Cable length</b>The cable adds capacitance to the OSC line. Keep it as short as practical. The calibration takes it into account, so re-measure the dry frequency after any change to the cable.</div>
+
+<h2>5&nbsp;&nbsp;Checks, first power-up and flashing</h2>
+
+<div class="keep"><h3>Sensor and cable (multimeter, cable ends not yet connected)</h3>
+<table>
+  <tr><th>Measure between sensor pins</th><th>Expected</th><th>If not</th></tr>
+  <tr><td>5 and 2</td><td>about 42 Ω</td><td>Heater wire open or on the wrong core</td></tr>
+  <tr><td>3 and 4</td><td>about 1 kΩ at room temperature</td><td>NTC wire open or on the wrong core</td></tr>
+  <tr><td>6 and 1</td><td>open (capacitor only)</td><td>Short in the cable or at the sensor</td></tr>
+  <tr><td>6 against 2, 3, 4, 5</td><td>open</td><td>Groups shorted; fix before connecting</td></tr>
+</table></div>
+
+<div class="keep pb"><h3>Board (supply off)</h3>
+<table>
+  <tr><th>Measure between</th><th>Expected</th><th>If not</th></tr>
+  <tr><td>OSC and 12 V terminal</td><td>open</td><td><b>Do not power up.</b> Find the short.</td></tr>
+  <tr><td>5 V and GND</td><td>no short</td><td>Wiring fault on the supply side</td></tr>
+  <tr><td>3.3 V and GND</td><td>no short</td><td>Solder bridge near the 74HC14 or I2C header</td></tr>
+</table></div>
+
+<h3>First power-up</h3>
+<ul class="box">
+  <li>3.3 V at 74HC14 pin 14.</li>
+  <li>12 V at the 12 V terminal, the heater stays cold (GPIO13 is low, R4 holds the gate off).</li>
+  <li>Nothing gets warm except the dev board's regulator.</li>
+</ul>
+
+<h3>Flashing</h3>
+<p>Connect the dev board by USB and run <code>esphome run firmware/regensensor_de.yaml</code> (German entity names) or <code>regensensor_en.yaml</code> (English). For setups without Home Assistant, use the <code>regensensor_mqtt_*.yaml</code> variants. <code>secrets.yaml</code> needs the Wi-Fi credentials and the API and OTA keys; the README lists the exact names. Later updates go over Wi-Fi.</p>
+
+<h2>6&nbsp;&nbsp;Function test and troubleshooting</h2>
+
+<h3>Function test</h3>
+<ol class="steps">
+  <li><b class="t">Frequency.</b><br>With a dry sensor, the <i>Frequenz / Frequency</i> entity shows a stable value. The prototype reads about 14.6 kHz with R1 = 220 kΩ; yours depends on the cable. Enter the average as <i>Trockenfrequenz / Dry Frequency</i>.</li>
+  <li><b class="t">Wetness.</b><br>A few drops of water on the sensor face: the frequency drops and the capacitance rises clearly above 100 pF. Dry it again and the value returns.</li>
+  <li><b class="t">Temperature.</b><br><i>Oberflächentemperatur / Surface Temperature</i> shows a plausible value close to the air temperature.</li>
+  <li><b class="t">Heater.</b><br>Switch <i>Automatikbetrieb / Auto Mode</i> off, then turn the heater on manually. The surface temperature rises by about 0.7 K/s and the heater switches off at 45 °C on its own. Switch Auto Mode back on afterwards.</li>
+  <li><b class="t">Calibrate.</b><br>Follow the calibration section of the README: dry frequency, NTC offset, thresholds.</li>
+</ol>
+
+<div class="keep"><h3>Troubleshooting</h3>
+<table>
+  <tr><th>Symptom</th><th>Likely cause</th></tr>
+  <tr><td>Frequency 0</td><td>74HC14 not powered, OSC open, R1 missing, or R1 far too large (1 MΩ stops on a wet surface)</td></tr>
+  <tr><td>Frequency jumps or noisy</td><td>Unused 74HC14 inputs floating, missing C1, poor GND at sensor pin 1, OSC routed next to 12 V</td></tr>
+  <tr><td>Surface temperature NaN, heater never runs</td><td>NTC open or shorted; the firmware blocks the heater on purpose</td></tr>
+  <tr><td>Heater does not heat</td><td>MOSFET not logic-level (e.g. IRF520), boost not at 12 V, drain and source swapped</td></tr>
+  <tr><td>Heater runs at power-up</td><td>R4 gate pull-down missing</td></tr>
+  <tr><td>I2C sensors missing</td><td>SDA/SCL swapped, no pull-ups anywhere, module on 5 V instead of 3.3 V</td></tr>
+</table></div>
+
+<div class="warn"><b>Outdoor use</b>Mount the electronics in an IP67 enclosure with desiccant, route the cable downwards with a drip loop, and seal the sensor edge fully when gluing it into the holder. Details are in the README section on the sensor holder.</div>
+
+</body>
+</html>
