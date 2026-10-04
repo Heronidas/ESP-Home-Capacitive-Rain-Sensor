@@ -54,6 +54,7 @@ substitutions:
   lux_nacht: "5"         # lx
   # Morning drying ("Morgentrocknung ab") from this brightness on.
   lux_morgen: "100"      # lx
+  morgen_abstand: "0.0"  # °C above the dew point (own limit, not "Tauschwelle")
 
   # Outdoor air for the dew point via MQTT: plain numbers (C, %), published
   # retained. Without messages the sensors stay empty and the fallback applies.
@@ -327,9 +328,9 @@ number:
     mode: box
     entity_category: config
 
-  # Morning drying, once a day: 04-11 h, light, no dew forming, level at
-  # least this: one heat pulse up to "Morgentrocknung Temperatur". At or
-  # above "Feuchtigkeitsschwelle" it never starts.
+  # Morning drying, once a day: 04-11 h, light, surface above the dew point
+  # (morgen_abstand), level at least this: one heat pulse up to
+  # "Morgentrocknung Temperatur". At or above "Feuchtigkeitsschwelle": off.
   - platform: template
     name: "Morgentrocknung ab"
     id: schwelle_morgen
@@ -1110,14 +1111,16 @@ interval:
           bool soll = id(g_feucht) && !id(g_regen) && !id(g_niesel) &&
                       (!id(g_tau) || id(g_regen_ende));
 
-          // Morning drying, once a day: once it is light and no more dew
-          // forms, one heat pulse up to morgen_temp for a surface still above
+          // Morning drying, once a day: once it is light and the surface is
+          // above the dew point, one heat pulse up to morgen_temp for a surface still above
           // "Morgentrocknung ab" (ends early once it reads dry).
           float sm  = id(schwelle_morgen).state;
           float lux = id(helligkeit).state;
+          float da  = id(g_taupunkt_abstand);
+          bool kein_tau = isnan(da) ? !id(g_tau) : da > ${morgen_abstand};
           bool morgen = false;
           if (!isnan(sm) && jz.is_valid() && jz.hour >= 4 && jz.hour < 11 &&
-              !isnan(lux) && lux >= ${lux_morgen} && !id(g_tau) && id(g_anz) &&
+              !isnan(lux) && lux >= ${lux_morgen} && kein_tau && id(g_anz) &&
               !id(g_regen) && !id(g_niesel) && !id(g_regen_ende)) {
             uint32_t tag = jz.year * 1000 + jz.day_of_year;
             if (id(g_morgen)) {

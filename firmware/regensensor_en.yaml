@@ -52,6 +52,7 @@ substitutions:
   lux_night: "5"         # lx
   # Morning drying ("Morning Drying From") from this brightness on.
   lux_morning: "100"     # lx
+  morning_dew_margin: "0.0" # °C above the dew point (own limit, not "Dew Threshold")
 
   # Outdoor air from Home Assistant, used for the dew point. Missing entities
   # are fine: the sensors stay empty and the fallback above applies.
@@ -326,9 +327,9 @@ number:
     mode: box
     entity_category: config
 
-  # Morning drying, once a day: 04-11 h, light, no dew forming, level at
-  # least this: one heat pulse up to "Morning Drying Temperature". At or
-  # above "Humidity Threshold" it never starts.
+  # Morning drying, once a day: 04-11 h, light, surface above the dew point
+  # (morning_dew_margin), level at least this: one heat pulse up to
+  # "Morning Drying Temperature". At or above "Humidity Threshold": off.
   - platform: template
     name: "Morning Drying From"
     id: threshold_morning
@@ -1124,14 +1125,16 @@ interval:
           bool desired = id(g_humid) && !id(g_rain) && !id(g_drizzle) &&
                       (!id(g_dew) || id(g_rain_ended));
 
-          // Morning drying, once a day: once it is light and no more dew
-          // forms, one heat pulse up to morning_temp for a surface still above
+          // Morning drying, once a day: once it is light and the surface is
+          // above the dew point, one heat pulse up to morning_temp for a surface still above
           // "Morning Drying From" (ends early once it reads dry).
           float sm  = id(threshold_morning).state;
           float lux = id(brightness).state;
+          float da  = id(g_dew_point_distance);
+          bool no_dew = isnan(da) ? !id(g_dew) : da > ${morning_dew_margin};
           bool morning = false;
           if (!isnan(sm) && now.is_valid() && now.hour >= 4 && now.hour < 11 &&
-              !isnan(lux) && lux >= ${lux_morning} && !id(g_dew) && id(g_display) &&
+              !isnan(lux) && lux >= ${lux_morning} && no_dew && id(g_display) &&
               !id(g_rain) && !id(g_drizzle) && !id(g_rain_ended)) {
             uint32_t day = now.year * 1000 + now.day_of_year;
             if (id(g_morning)) {
