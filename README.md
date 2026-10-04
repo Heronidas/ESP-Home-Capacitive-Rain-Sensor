@@ -65,10 +65,10 @@ This project takes a different approach:
 <summary><b>Heater control</b></summary>
 
 - [x] Dries the surface after rain, dew or frost
-- [x] Morning drying: once a day, once it is light and no more dew forms
+- [x] Morning drying: one short heat pulse a day, once it is light and no more dew forms
 - [x] Stays off during drizzle and rain, so the sensor can see the precipitation
 - [x] Rain end detection: no rise for a set time, then a short heater test confirms
-- [x] Over-temperature cut-off at 45 °C, checked every second
+- [x] Over-temperature cut-off at 45 °C (morning pulse: adjustable, at most 60 °C), checked every second
 - [x] Heating-time budget with enforced pause (fog cannot keep it running for hours)
 - [x] Safe defaults: off after reset, off on an implausible NTC reading (open or shorted wire)
 

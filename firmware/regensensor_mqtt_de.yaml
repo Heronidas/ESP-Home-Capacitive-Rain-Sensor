@@ -328,8 +328,8 @@ number:
     entity_category: config
 
   # Morning drying, once a day: 04-11 h, light, no dew forming, level at
-  # least this: heat until the display threshold. At or above
-  # "Feuchtigkeitsschwelle" it never starts.
+  # least this: one heat pulse up to "Morgentrocknung Temperatur". At or
+  # above "Feuchtigkeitsschwelle" it never starts.
   - platform: template
     name: "Morgentrocknung ab"
     id: schwelle_morgen
@@ -338,6 +338,20 @@ number:
     max_value: 1500
     step: 10
     initial_value: 150
+    restore_value: true
+    optimistic: true
+    mode: box
+    entity_category: config
+
+  # Target of the morning pulse; normal heating stays at temp_aus.
+  - platform: template
+    name: "Morgentrocknung Temperatur"
+    id: morgen_temp
+    unit_of_measurement: "°C"
+    min_value: 45
+    max_value: 60
+    step: 1
+    initial_value: 55
     restore_value: true
     optimistic: true
     mode: box
@@ -1072,8 +1086,12 @@ interval:
 
           // 1) Safety, always (also manual). NaN includes an implausible
           // resistance, i.e. a wiring fault.
-          if (isnan(t) || t >= ${temp_aus}) {
+          // The morning pulse may heat up to "Morgentrocknung Temperatur".
+          float tm = id(morgen_temp).state;
+          float grenze = (id(g_morgen) && !isnan(tm)) ? tm : ${temp_aus};
+          if (isnan(t) || t >= grenze) {
             if (heiz_an) id(heizung).turn_off();
+            if (!isnan(t)) id(g_morgen) = false;  // morning pulse done
             return;
           }
 
@@ -1093,8 +1111,8 @@ interval:
                       (!id(g_tau) || id(g_regen_ende));
 
           // Morning drying, once a day: once it is light and no more dew
-          // forms, dry a surface still above "Morgentrocknung ab" down to the
-          // display level.
+          // forms, one heat pulse up to morgen_temp for a surface still above
+          // "Morgentrocknung ab" (ends early once it reads dry).
           float sm  = id(schwelle_morgen).state;
           float lux = id(helligkeit).state;
           bool morgen = false;

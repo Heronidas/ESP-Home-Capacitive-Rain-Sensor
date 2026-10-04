@@ -327,8 +327,8 @@ number:
     entity_category: config
 
   # Morning drying, once a day: 04-11 h, light, no dew forming, level at
-  # least this: heat until the display threshold. At or above
-  # "Humidity Threshold" it never starts.
+  # least this: one heat pulse up to "Morning Drying Temperature". At or
+  # above "Humidity Threshold" it never starts.
   - platform: template
     name: "Morning Drying From"
     id: threshold_morning
@@ -337,6 +337,20 @@ number:
     max_value: 1500
     step: 10
     initial_value: 150
+    restore_value: true
+    optimistic: true
+    mode: box
+    entity_category: config
+
+  # Target of the morning pulse; normal heating stays at temp_off.
+  - platform: template
+    name: "Morning Drying Temperature"
+    id: morning_temp
+    unit_of_measurement: "°C"
+    min_value: 45
+    max_value: 60
+    step: 1
+    initial_value: 55
     restore_value: true
     optimistic: true
     mode: box
@@ -1086,8 +1100,12 @@ interval:
 
           // 1) Safety, always (also manual). NaN includes an implausible
           // resistance, i.e. a wiring fault.
-          if (isnan(t) || t >= ${temp_off}) {
+          // The morning pulse may heat up to "Morning Drying Temperature".
+          float tm = id(morning_temp).state;
+          float limit = (id(g_morning) && !isnan(tm)) ? tm : ${temp_off};
+          if (isnan(t) || t >= limit) {
             if (heater_on) id(heater).turn_off();
+            if (!isnan(t)) id(g_morning) = false;  // morning pulse done
             return;
           }
 
@@ -1107,8 +1125,8 @@ interval:
                       (!id(g_dew) || id(g_rain_ended));
 
           // Morning drying, once a day: once it is light and no more dew
-          // forms, dry a surface still above "Morning Drying From" down to the
-          // display level.
+          // forms, one heat pulse up to morning_temp for a surface still above
+          // "Morning Drying From" (ends early once it reads dry).
           float sm  = id(threshold_morning).state;
           float lux = id(brightness).state;
           bool morning = false;
