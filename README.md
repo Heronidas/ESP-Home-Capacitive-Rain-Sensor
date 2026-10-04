@@ -11,7 +11,8 @@ RC-SPC1KA sensor element · ESP32 carrier board · ESPHome firmware
 [![ESP32](https://img.shields.io/badge/ESP32-WROOM--32E-E7352C?logo=espressif&logoColor=white)](#board-reference)
 [![KiCad](https://img.shields.io/badge/KiCad-7%2B-314CB0?logo=kicad&logoColor=white)](hardware/)
 [![Status](https://img.shields.io/badge/status-prototype-orange)](#-project-status)
-[![License](https://img.shields.io/badge/license-non--commercial-lightgrey)](LICENSE.md)
+[![Firmware: GPL-3.0](https://img.shields.io/badge/firmware-GPL--3.0-blue)](LICENSES/GPL-3.0.txt)
+[![Hardware: CC BY-NC-SA 4.0](https://img.shields.io/badge/hardware-CC%20BY--NC--SA%204.0-lightgrey)](LICENSES/CC-BY-NC-SA-4.0.txt)
 
 <img src="docs/board-3d.png" alt="Rev A carrier board, KiCad 3D view" width="560">
 
@@ -469,12 +470,12 @@ If this project saved you time, you can support it on Ko-fi. Not required, alway
 
 ## 📄 License
 
-Free for private and non-commercial use. Commercial use requires written permission; commercial licenses are available on request.
+The firmware is open source under the GPL. The hardware is free for private and non-commercial use; commercial use of the hardware requires written permission, and commercial licenses are available on request.
 
 | Part | License |
 |---|---|
 | Hardware, fabrication files, sensor holder, documentation | [CC BY-NC-SA 4.0](LICENSES/CC-BY-NC-SA-4.0.txt) |
-| Firmware, blueprint, tools | [PolyForm Noncommercial 1.0.0](LICENSES/PolyForm-Noncommercial-1.0.0.md) |
+| Firmware, blueprint, tools | [GPL-3.0-or-later](LICENSES/GPL-3.0.txt) |
 
 Details, including passing on spare boards at cost, in [`LICENSE.md`](LICENSE.md).
 
