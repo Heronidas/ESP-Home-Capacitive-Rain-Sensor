@@ -59,6 +59,9 @@ substitutions:
   outdoor_humidity_topic: ${name}/outdoor/humidity
   timezone: Europe/Berlin
 
+  # Weather state texts; index stored across sleep (see on_boot).
+  ws_names: '"dry", "humid", "wet", "Dew", "Morning Dew", "Evening Dew", "Frost", "Drizzle", "Rain", "Fog"'
+
   # Night mode (deep sleep, RTC timer wake).
   sleep_interval: 5min
   sleep_wake_time: "35000"      # ms awake before sleeping
@@ -67,6 +70,15 @@ substitutions:
 esphome:
   name: ${name}
   friendly_name: ${friendly_name}
+  # After a wake from night mode, report the last weather state at once
+  # instead of "unknown" until the first measurement.
+  on_boot:
+    priority: -100
+    then:
+      - lambda: |-
+          static const char *const N[] = {${ws_names}};
+          int i = id(g_weather_state);
+          if (i >= 0 && i < (int)(sizeof(N) / sizeof(N[0]))) id(weather_state).publish_state(N[i]);
 
 esp32:
   board: esp32dev
@@ -211,6 +223,12 @@ globals:
     type: bool
     restore_value: true
     initial_value: 'false'
+
+  # Last published weather state (index into ws_names, -1 = none).
+  - id: g_weather_state
+    type: int
+    restore_value: true
+    initial_value: '-1'
 
   # Last known "inside night window", fallback when the clock is missing.
   - id: g_night
@@ -862,8 +880,14 @@ text_sensor:
   #   Frost     same, at or below 0 °C
   - platform: template
     name: "Weather State"
+    id: weather_state
     icon: mdi:weather-partly-rainy
     update_interval: 15s
+    on_value:
+      - lambda: |-
+          static const char *const N[] = {${ws_names}};
+          for (int i = 0; i < (int)(sizeof(N) / sizeof(N[0])); i++)
+            if (x == N[i]) id(g_weather_state) = i;
     lambda: |-
       float c  = id(capacitance).state;
       float sa = id(threshold_display).state;
@@ -890,7 +914,9 @@ text_sensor:
         dew = id(g_dew) ? dp <= st + ${hyst_dew} : dp <= st;
       } else {
         // Fallback: slow wetting (no precipitation latch) in the dark.
+        // Right after a wake neither value is there yet: keep the last state.
         float lux = id(brightness).state;
+        if (isnan(lux) && millis() < 60000) return {};
         dew = !isnan(lux) && lux < ${lux_night};
       }
       id(g_dew) = dew;

@@ -59,6 +59,9 @@ substitutions:
   aussen_feuchte_topic: ${name}/aussenluft/feuchte
   zeitzone: Europe/Berlin
 
+  # Weather state texts; index stored across sleep (see on_boot).
+  wl_namen: '"trocken", "feucht", "nass", "Tau", "Morgentau", "Abendtau", "Reif", "Niesel", "Regen", "Nebel"'
+
   # Night mode (deep sleep, RTC timer wake).
   schlaf_intervall: 5min
   schlaf_wachzeit: "35000"      # ms awake before sleeping
@@ -67,6 +70,15 @@ substitutions:
 esphome:
   name: ${name}
   friendly_name: ${friendly_name}
+  # After a wake from night mode, report the last weather state at once
+  # instead of "unknown" until the first measurement.
+  on_boot:
+    priority: -100
+    then:
+      - lambda: |-
+          static const char *const N[] = {${wl_namen}};
+          int i = id(g_wetterlage);
+          if (i >= 0 && i < (int)(sizeof(N) / sizeof(N[0]))) id(wetterlage).publish_state(N[i]);
 
 esp32:
   board: esp32dev
@@ -211,6 +223,12 @@ globals:
     type: bool
     restore_value: true
     initial_value: 'false'
+
+  # Last published weather state (index into wl_namen, -1 = none).
+  - id: g_wetterlage
+    type: int
+    restore_value: true
+    initial_value: '-1'
 
   # Last known "inside night window", fallback when the clock is missing.
   - id: g_nacht
@@ -862,8 +880,14 @@ text_sensor:
   #   Reif      same, at or below 0 °C
   - platform: template
     name: "Wetterlage"
+    id: wetterlage
     icon: mdi:weather-partly-rainy
     update_interval: 15s
+    on_value:
+      - lambda: |-
+          static const char *const N[] = {${wl_namen}};
+          for (int i = 0; i < (int)(sizeof(N) / sizeof(N[0])); i++)
+            if (x == N[i]) id(g_wetterlage) = i;
     lambda: |-
       float c  = id(kapazitaet).state;
       float sa = id(schwelle_anzeige).state;
@@ -890,7 +914,9 @@ text_sensor:
         tau = id(g_tau) ? dp <= st + ${hyst_tau} : dp <= st;
       } else {
         // Fallback: slow wetting (no precipitation latch) in the dark.
+        // Right after a wake neither value is there yet: keep the last state.
         float lux = id(helligkeit).state;
+        if (isnan(lux) && millis() < 60000) return {};
         tau = !isnan(lux) && lux < ${lux_nacht};
       }
       id(g_tau) = tau;
