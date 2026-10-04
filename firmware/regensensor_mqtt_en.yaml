@@ -1110,8 +1110,8 @@ interval:
                       (!id(g_dew) || id(g_rain_ended));
 
           // Morning drying, once a day: once it is light and the surface is
-          // above the dew point, one heat pulse up to morning_temp for a surface still above
-          // "Morning Drying From" (ends early once it reads dry).
+          // above the dew point, one heat pulse up to morning_temp for a surface
+          // still above "Morning Drying From" (ends early once it reads dry).
           float sm  = id(threshold_morning).state;
           float lux = id(brightness).state;
           float da  = id(g_dew_point_distance);
