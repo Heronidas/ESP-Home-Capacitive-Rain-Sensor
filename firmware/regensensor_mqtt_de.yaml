@@ -52,6 +52,8 @@ substitutions:
 
   # Dew fallback without a dew point: slow wetting in the dark.
   lux_nacht: "5"         # lx
+  # Morning drying ("Morgentrocknung ab") from this brightness on.
+  lux_morgen: "100"      # lx
 
   # Outdoor air for the dew point via MQTT: plain numbers (C, %), published
   # retained. Without messages the sensors stay empty and the fallback applies.
@@ -223,6 +225,14 @@ globals:
     type: bool
     restore_value: true
     initial_value: 'false'
+  - id: g_morgen       # morning drying running
+    type: bool
+    restore_value: true
+    initial_value: 'false'
+  - id: g_morgen_tag   # day of the last morning drying (year * 1000 + day)
+    type: uint32_t
+    restore_value: true
+    initial_value: '0'
 
   # Last published weather state (index into wl_namen, -1 = none).
   - id: g_wetterlage
@@ -312,6 +322,22 @@ number:
     max_value: 1500
     step: 10
     initial_value: 200
+    restore_value: true
+    optimistic: true
+    mode: box
+    entity_category: config
+
+  # Morning drying, once a day: 04-11 h, light, no dew forming, level at
+  # least this: heat until the display threshold. At or above
+  # "Feuchtigkeitsschwelle" it never starts.
+  - platform: template
+    name: "Morgentrocknung ab"
+    id: schwelle_morgen
+    unit_of_measurement: "pF"
+    min_value: 100
+    max_value: 1500
+    step: 10
+    initial_value: 150
     restore_value: true
     optimistic: true
     mode: box
@@ -1065,6 +1091,26 @@ interval:
           }
           bool soll = id(g_feucht) && !id(g_regen) && !id(g_niesel) &&
                       (!id(g_tau) || id(g_regen_ende));
+
+          // Morning drying, once a day: once it is light and no more dew
+          // forms, dry a surface still above "Morgentrocknung ab" down to the
+          // display level.
+          float sm  = id(schwelle_morgen).state;
+          float lux = id(helligkeit).state;
+          bool morgen = false;
+          if (!isnan(sm) && jz.is_valid() && jz.hour >= 4 && jz.hour < 11 &&
+              !isnan(lux) && lux >= ${lux_morgen} && !id(g_tau) && id(g_anz) &&
+              !id(g_regen) && !id(g_niesel) && !id(g_regen_ende)) {
+            uint32_t tag = jz.year * 1000 + jz.day_of_year;
+            if (id(g_morgen)) {
+              morgen = true;
+            } else if (id(g_morgen_tag) != tag && c >= sm && sm < sfh) {
+              morgen = true;
+              id(g_morgen_tag) = tag;
+            }
+          }
+          id(g_morgen) = morgen;
+          soll = soll || morgen;
 
           // 4) Heating limit: in fog the surface gets wet faster than it
           // dries. Exceeding the maximum triggers a fixed pause.

@@ -19,6 +19,8 @@ A fast rise latches **drizzle** (*Drizzle Detection*, default 60 pF/min) or, fro
 
 The heater dries the film left after rain, and dew or frost once they have ended. It stays off while drizzle or rain is latched, so the sensor can see the precipitation, and while dew or frost is forming, since it would form again at once. After a rain end it dries the surface. If the level is still at rain level after 3 minutes of drying, it is still raining and rain is set again. Rain remains reported until the surface has dried below the rain level, so steady rain never reports a false end.
 
+Morning drying: once a day between 04:00 and 11:00, when it is light (100 lx) and no more dew forms, a surface still at *Morning Drying From* (default 150 pF) or above is dried down to the display threshold. This clears the remaining film below the heating threshold.
+
 Safety: off at 45 °C surface temperature, back on below 40 °C, checked every second (the surface heats at about 0.7 K/s). Heating time is budgeted (default 15 min, then a 2 h pause). Implausible NTC readings switch it off, and it always starts off after a reset.
 
 ## Battery

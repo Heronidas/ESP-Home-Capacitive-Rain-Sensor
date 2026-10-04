@@ -16,6 +16,7 @@ The DE firmware uses German entity names, the EN firmware English ones. Logic an
 | Tauschwelle | Dew Threshold | distance to the dew point from which the state shows dew (default 2 °C) |
 | Niesel Erkennung, Regen Erkennung | Drizzle Detection, Rain Detection | rise that counts as drizzle / rain (default 60 / 150 pF/min) |
 | Regenende nach | Rain End After | drizzle and rain end after this long without a rise (default 7 min) |
+| Morgentrocknung ab | Morning Drying From | level from which the surface is dried once each morning (default 150 pF; at or above the heating threshold: off) |
 | Heizung, Automatikbetrieb | Heater, Auto Mode | heater switch; master switch for automatic heating and night mode |
 | Max. Heizdauer, Pause je Heizminute, Heizpause | Max. Heating Time, Pause per Heating Minute, Heating Pause | heating-time budget |
 | Heizsperre aktiv, Heizkonto, Sperre verbleibend | Heating Lockout Active, Heating Account, Lockout Remaining | heating-time budget state |
