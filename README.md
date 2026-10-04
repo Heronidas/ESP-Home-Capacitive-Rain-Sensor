@@ -132,7 +132,7 @@ The **[wiki](docs/wiki/Home.md)** covers everything in detail:
 | | |
 |---|---|
 | Getting started | [Parts](docs/wiki/Parts.md) · [Wiring](docs/wiki/Wiring.md) · [Flashing and updates](docs/wiki/Flashing-and-Updates.md) · [Calibration](docs/wiki/Calibration.md) |
-| Build | [Ordering the board](docs/wiki/Ordering-the-Board.md) · [Module build](docs/wiki/Module-Build.md) · [Sensor holder](docs/wiki/Sensor-Holder.md) |
+| Build | [Ordering the board](docs/wiki/Ordering-the-Board.md) · [Module build](docs/wiki/Module-Build.md) · [Sensor holder](docs/wiki/Sensor-Holder.md) · [Board dimensions](docs/wiki/Board-Reference.md#dimensions) |
 | Home Assistant | [Entities](docs/wiki/Entities.md) · [Outdoor air and blueprint](docs/wiki/Outdoor-Air.md) · [MQTT and web page](docs/wiki/MQTT-and-Web-Page.md) |
 | How it works | [Measurement, rain or dew, heater](docs/wiki/How-It-Works.md) |
 | Reference | [Board reference](docs/wiki/Board-Reference.md) · [Extensions](docs/wiki/Extensions.md) · [Troubleshooting](docs/wiki/Troubleshooting.md) · [Known limitations](docs/wiki/Known-Limitations.md) |
@@ -148,7 +148,7 @@ The **[wiki](docs/wiki/Home.md)** covers everything in detail:
 | `blueprints/` | Home Assistant blueprint for outdoor air |
 | `hardware/` | KiCad project (schematic, PCB) |
 | `fabrication/` | Gerbers, drill files, JLCPCB BOM and CPL |
-| `mechanical/` | Sensor holder STL |
+| `mechanical/` | Sensor holder STL, board outline DXF |
 | `docs/` | Wiki pages (`docs/wiki/`), images, Module Build Guide (PDF) and its source (`docs/build-guide/`) |
 | `tools/` | Python scripts (KiCad 7 `pcbnew`) generating schematic, PCB and fabrication files from `design.py` |
 | `.github/workflows/fab.yml` | CI: DRC and Gerber export |

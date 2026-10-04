@@ -10,6 +10,7 @@
 - [Ordering the board](Ordering-the-Board.md)
 - [Module build (perfboard)](Module-Build.md)
 - [Sensor holder](Sensor-Holder.md)
+- [Board dimensions](Board-Reference.md#dimensions)
 
 **Home Assistant**
 - [Entities](Entities.md)

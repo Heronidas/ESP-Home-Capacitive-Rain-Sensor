@@ -1,6 +1,24 @@
 # Board reference
 
-- 72 × 56 mm, 2 layers, 4 × M3 holes. The ESP32 antenna overhangs the top edge; keep metal and enclosure walls away from it.
+## Dimensions
+
+<p align="center"><img src="../board-dimensions.svg" alt="Board dimensions" width="720"></p>
+
+| | |
+|---|---|
+| Board | 72 × 56 mm, 1.6 mm thick |
+| Mounting holes | 4 × Ø3.2 mm (M3), centres 3.5 mm from each edge |
+| Hole spacing | 65 mm × 49 mm (centre to centre) |
+| Keep-out around each hole | Ø6.8 mm, for screw heads, nuts or standoffs |
+| ESP32 antenna | overhangs the top edge by 6.5 mm, 27 mm from the left edge, 18 mm wide; overall length with antenna 62.5 mm |
+
+For an enclosure or holder: leave about 15 mm above the board for the screw terminals, pin headers and plugged cables, and about 3 mm below for the through-hole solder joints (e.g. 3–5 mm standoffs). The screw terminals sit along the bottom edge, so plan room for the cables there. Keep metal and enclosure walls away from the antenna. Measure your own terminals and headers if you use different parts.
+
+[`mechanical/board-outline.dxf`](../../mechanical/board-outline.dxf) holds the outline, the holes, the antenna area and the connector positions for import into CAD (mm, origin at the bottom-left corner, top view; one layer each: OUTLINE, HOLES, ANTENNA, CONNECTORS).
+
+## Overview
+
+- 2 layers; size and holes see [Dimensions](#dimensions).
 - Input: **5 V** (e.g. Waveshare Solar Power Manager (D), USB, any 5 V supply up to 3 A). No solar or battery charging on this board.
 - On board: AP2112K 3.3 V LDO; MT3608 boost to a fixed **12 V** for the heater, switched by GPIO13 through a low-side MOSFET; reverse-polarity PMOS; SN74HC14 relaxation oscillator; NTC divider; optional battery voltage divider; I2C pull-ups; BOOT and RESET buttons; UART header.
 - I2C on Qwiic/STEMMA QT (JST-SH), a 1×4 2.54 mm socket and a 4-pin screw terminal, all in parallel.
