@@ -1056,12 +1056,15 @@ interval:
           if (!id(auto_mode).state) return;
 
           // 3) Heat when wet, never during precipitation (the sensor has to
-          // see it, and the heater cannot keep up with rain).
+          // see it, and the heater cannot keep up with rain), and not during
+          // dew or frost (it forms again at once); drying follows when the
+          // dew ends. After a rain end the surface is always dried.
           if (isnan(c) || isnan(sr) || isnan(sfh)) {
             if (heater_on) id(heater).turn_off();
             return;
           }
-          bool desired = id(g_humid) && !id(g_rain) && !id(g_drizzle);
+          bool desired = id(g_humid) && !id(g_rain) && !id(g_drizzle) &&
+                      (!id(g_dew) || id(g_rain_ended));
 
           // 4) Heating limit: in fog the surface gets wet faster than it
           // dries. Exceeding the maximum triggers a fixed pause.
