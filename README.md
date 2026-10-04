@@ -192,15 +192,17 @@ Connect the VEML7700 to the I2C terminal or Qwiic, the HTU21D to the socket labe
 The board has no USB port. Use the UART header J7 (adapter RX to TX, TX to RX, GND to GND) and power the board through POWER IN; J7 has no power pin.
 
 1. Hold BOOT, tap RESET, release BOOT.
-2. Run `esphome run firmware/regensensor_de.yaml` (German entity names) or `firmware/regensensor_en.yaml` (identical logic, English names and substitution keys).
-3. Later updates go over Wi-Fi.
+2. In your ESPHome folder, create a device config from [`firmware/examples/regensensor.yaml`](firmware/examples/regensensor.yaml) (German entity names) or [`rain-sensor.yaml`](firmware/examples/rain-sensor.yaml) (English). It loads the firmware straight from this repository; pick the variant in `files:` and override any substitution there.
+3. Install it once over USB/UART. Later updates go over Wi-Fi: *Install* in ESPHome fetches the current firmware from GitHub.
 
-`secrets.yaml` needs `wifi_ssid`, `wifi_password` and the API/OTA keys:
+| Variant | File | API key | OTA password |
+|---|---|---|---|
+| Home Assistant, German | `regensensor_de.yaml` | `regensensor_api_key` | `regensensor_ota_password` |
+| Home Assistant, English | `regensensor_en.yaml` | `rain_sensor_api_key` | `rain_sensor_ota_password` |
+| MQTT + web page, German | `regensensor_mqtt_de.yaml` | – | `regensensor_ota_password` |
+| MQTT + web page, English | `regensensor_mqtt_en.yaml` | – | `rain_sensor_ota_password` |
 
-| File | API key | OTA password |
-|---|---|---|
-| `regensensor_de.yaml` | `regensensor_api_key` | `regensensor_ota_password` |
-| `regensensor_en.yaml` | `rain_sensor_api_key` | `rain_sensor_ota_password` |
+`secrets.yaml` needs `wifi_ssid`, `wifi_password` and the keys above (MQTT variants also `mqtt_broker`, `mqtt_username`, `mqtt_password`). To keep the firmware fixed, set `ref:` to a release tag instead of `main`. Copying a firmware file into your ESPHome folder and flashing it directly works too.
 
 For the dew point, set your outdoor sensors in the substitutions (`aussen_temp_entity` / `aussen_feuchte_entity` in DE, `outdoor_temp_entity` / `outdoor_humidity_entity` in EN), or use the [blueprint](#outdoor-air-for-the-dew-point). Missing entities are fine; the fallback applies. For the standalone variant, see [below](#standalone-variant-web-page-and-mqtt).
 
@@ -449,7 +451,7 @@ IO32 doubles as the alternative NTC pull-up drive (see solder jumpers). The expa
 
 | Path | Content |
 |---|---|
-| `firmware/` | ESPHome configs: `regensensor_de/_en.yaml` (Home Assistant API), `regensensor_mqtt_de/_en.yaml` (web page and MQTT) |
+| `firmware/` | ESPHome firmware: `regensensor_de/_en.yaml` (Home Assistant API), `regensensor_mqtt_de/_en.yaml` (web page and MQTT); `examples/` device configs that load it from GitHub |
 | `blueprints/` | Home Assistant blueprint for outdoor air |
 | `hardware/` | KiCad project (schematic, PCB) |
 | `fabrication/` | Gerbers, drill files, JLCPCB BOM and CPL |

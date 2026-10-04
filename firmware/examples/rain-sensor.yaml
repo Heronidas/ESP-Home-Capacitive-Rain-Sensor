@@ -1,0 +1,15 @@
+# Device config: loads the firmware from GitHub; "Install" fetches updates.
+# Other variants: regensensor_de.yaml, regensensor_mqtt_en.yaml, regensensor_mqtt_de.yaml
+# Any substitution of the loaded file can be overridden here.
+substitutions:
+  name: rain-sensor
+  friendly_name: Rain Sensor
+  outdoor_temp_entity: sensor.outdoor_temperature
+  outdoor_humidity_entity: sensor.outdoor_humidity
+
+packages:
+  rain_sensor:
+    url: https://github.com/Heronidas/esphome-capacitive-rain-sensor
+    ref: main
+    files: [firmware/regensensor_en.yaml]
+    refresh: 1d
