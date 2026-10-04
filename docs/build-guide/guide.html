@@ -77,7 +77,7 @@ li { margin-bottom: 1mm; }
     <li>Function test and troubleshooting</li>
   </ol>
 
-  <div class="foot">Part of <b>Heronidas/esphome-capacitive-rain-sensor</b>. Calibration, Home Assistant setup and the sensor holder are covered in the repository README. Licensed CC BY-NC-SA 4.0. Revision 1, October 2026.</div>
+  <div class="foot">Part of <b>Heronidas/esphome-capacitive-rain-sensor</b>. Calibration, Home Assistant setup and the sensor holder are covered in the repository wiki. Licensed CC BY-NC-SA 4.0. Revision 1, October 2026.</div>
 </section>
 
 <h2>1&nbsp;&nbsp;Parts and tools</h2>
@@ -86,7 +86,7 @@ li { margin-bottom: 1mm; }
 <table>
   <tr><th class="num">Qty</th><th>Part</th><th>Notes</th></tr>
   <tr><td class="num">1</td><td>ESP32 dev board (ESP32-WROOM-32, 30 or 38 pin)</td><td>GPIO 13, 21, 22, 25, 34, 35 must be broken out. On-board 3.3 V regulator and USB.</td></tr>
-  <tr><td class="num">1</td><td>RC-SPC1KA rain sensor (Radiocontrolli)</td><td>Capacitor, heater and NTC on one element. See README for sources.</td></tr>
+  <tr><td class="num">1</td><td>RC-SPC1KA rain sensor (Radiocontrolli)</td><td>Capacitor, heater and NTC on one element. See the wiki page Parts for sources.</td></tr>
   <tr><td class="num">1</td><td>SN74HC14N, DIP-14, with socket</td><td>Hex Schmitt-trigger inverter. Use the HC type at 3.3 V.</td></tr>
   <tr><td class="num">1</td><td>Resistor 220 kΩ (R1)</td><td>Oscillator.</td></tr>
   <tr><td class="num">2</td><td>Resistor 5.6 kΩ (R2), in parallel</td><td>Gives 2.8 kΩ NTC pull-up. A single 2.7 kΩ also works.</td></tr>
@@ -235,7 +235,7 @@ li { margin-bottom: 1mm; }
 </ul>
 
 <h3>Flashing</h3>
-<p>Connect the dev board by USB and run <code>esphome run firmware/regensensor_de.yaml</code> (German entity names) or <code>regensensor_en.yaml</code> (English). For setups without Home Assistant, use the <code>regensensor_mqtt_*.yaml</code> variants. <code>secrets.yaml</code> needs the Wi-Fi credentials and the API and OTA keys; the README lists the exact names. Later updates go over Wi-Fi.</p>
+<p>Create a device config from <code>firmware/examples/regensensor.yaml</code> (German entity names) or <code>rain-sensor.yaml</code> (English); it loads the firmware from the repository. For setups without Home Assistant, pick a <code>regensensor_mqtt_*.yaml</code> variant there. Connect the dev board by USB and install it once. <code>secrets.yaml</code> needs the Wi-Fi credentials and the API and OTA keys; the wiki page Flashing and updates lists the exact names. Later updates go over Wi-Fi.</p>
 
 <h2>6&nbsp;&nbsp;Function test and troubleshooting</h2>
 
@@ -245,7 +245,7 @@ li { margin-bottom: 1mm; }
   <li><b class="t">Wetness.</b><br>A few drops of water on the sensor face: the frequency drops and the capacitance rises clearly above 100 pF. Dry it again and the value returns.</li>
   <li><b class="t">Temperature.</b><br><i>Oberflächentemperatur / Surface Temperature</i> shows a plausible value close to the air temperature.</li>
   <li><b class="t">Heater.</b><br>Switch <i>Automatikbetrieb / Auto Mode</i> off, then turn the heater on manually. The surface temperature rises by about 0.7 K/s and the heater switches off at 45 °C on its own. Switch Auto Mode back on afterwards.</li>
-  <li><b class="t">Calibrate.</b><br>Follow the calibration section of the README: dry frequency, NTC offset, thresholds.</li>
+  <li><b class="t">Calibrate.</b><br>Follow the wiki page Calibration: dry frequency, NTC offset, thresholds.</li>
 </ol>
 
 <div class="keep"><h3>Troubleshooting</h3>
@@ -259,7 +259,7 @@ li { margin-bottom: 1mm; }
   <tr><td>I2C sensors missing</td><td>SDA/SCL swapped, no pull-ups anywhere, module on 5 V instead of 3.3 V</td></tr>
 </table></div>
 
-<div class="warn"><b>Outdoor use</b>Mount the electronics in an IP67 enclosure with desiccant, route the cable downwards with a drip loop, and seal the sensor edge fully when gluing it into the holder. Details are in the README section on the sensor holder.</div>
+<div class="warn"><b>Outdoor use</b>Mount the electronics in an IP67 enclosure with desiccant, route the cable downwards with a drip loop, and seal the sensor edge fully when gluing it into the holder. Details are on the wiki page Sensor holder.</div>
 
 </body>
 </html>
