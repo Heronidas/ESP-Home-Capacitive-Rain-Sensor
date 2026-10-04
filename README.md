@@ -57,7 +57,7 @@ This project takes a different approach:
 - [x] Fallback without outdoor data: slow wetting in the dark reads as dew
 - [x] Hysteresis on every threshold, no flickering states
 - [x] Wetting in % (RC-SPC1K datasheet curve)
-- [ ] Fog detection (prepared in the YAML, untested)
+- [ ] Fog detection (planned: fast re-wetting after the morning heat pulse)
 
 </details>
 

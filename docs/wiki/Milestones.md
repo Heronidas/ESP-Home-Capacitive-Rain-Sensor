@@ -56,13 +56,13 @@ The frequency dropped to 0 Hz. Water on the plate added a leakage path that the 
 **Learned:** lab tests with a damp cloth do not replace real rain.
 
 ### 3 October: test series with 220 kΩ
-Oscillator stable in every test: dry ~100 pF, mist ~270, three drops ~290, heavy spray ~600, soaked cloth 870–1240 pF. Drizzle and rain are now detected by rate of rise, with a rain-end timer and a short heater test.
+Oscillator stable in every test: dry ~100 pF, spray mist ~270, three drops ~290, heavy spray ~600, soaked cloth 870–1240 pF. Drizzle and rain are now detected by rate of rise, with a rain-end timer and a short heater test.
 
 ### 3 October: false rain alert *(setback)*
 A notification fired without rain: the automations listened to "humid" instead of "rain". They now use the rain sensor.
 
 ### 4 October: night behaviour and first fog morning
-Short "unknown" states after each wake removed; the last weather state is restored across sleep. The heater no longer runs while dew or frost is forming, which saves energy. First fog morning logged: capacitance flat at ~187 pF while the plate warmed slightly.
+Short "unknown" states after each wake removed; the last weather state is restored across sleep. The heater no longer runs while dew or frost is forming, which saves energy. First fog morning logged: capacitance flat at ~187 pF while the plate warmed slightly. Morning drying added: one short heat pulse a day once the surface is above the dew point. In fog the surface wetted again within ten minutes of a heat pulse (about 7 pF/min) although it was above the dew point; this re-wetting is the candidate for fog detection.
 
 ### Next
 See [Roadmap](Roadmap.md).

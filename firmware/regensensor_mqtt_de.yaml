@@ -249,10 +249,10 @@ globals:
 
 
 # Runtime thresholds; initial_value applies only on the first boot.
-# Start values from measurements: dry 100, dewy night up to ~120,
-# mist ~270, three drops ~290, heavy spray ~600, soaked cloth 870-1240 pF.
-# The sensor reacts to humid air before water lies on it: keep the display
-# threshold above the maximum of a dry, humid night.
+# Start values from measurements: dry 100, dew ~105-120 (cloudy night) to
+# ~170-200 (clear night), spray mist ~270, three drops ~290, heavy spray ~600,
+# soaked cloth 870-1240 pF. The sensor reacts to humid air before water lies
+# on it: keep the display threshold above a humid night without dew.
 number:
   # Dry frequency of your setup = 100 pF. Read "Frequenz" with a completely
   # dry surface and enter the mean here. "Kapazität" stays NAN without it.
@@ -969,9 +969,7 @@ text_sensor:
         return {"Tau"};
       }
 
-      // Fog (untested, off): saturated outdoor air, surface near air temperature.
-      // float ta = id(aussen_temperatur).state, rh = id(aussen_feuchte).state;
-      // if (!isnan(ta) && !isnan(rh) && !isnan(ts) && rh >= 97.0f && fabsf(ts - ta) < 1.0f) return {"Nebel"};
+      // Fog: not detected yet, see the roadmap in the wiki.
 
       return id(g_feucht) ? std::string("nass") : std::string("feucht");
 
