@@ -1090,7 +1090,10 @@ interval:
           float limit = (id(g_morning) && !isnan(tm)) ? tm : ${temp_off};
           if (isnan(t) || t >= limit) {
             if (heater_on) id(heater).turn_off();
-            if (!isnan(t)) id(g_morning) = false;  // morning pulse done
+            if (!isnan(t) && id(g_morning)) {
+              id(g_morning) = false;  // morning pulse done
+              ESP_LOGI("heater", "Morning drying: done at %.1f C", t);
+            }
             return;
           }
 
@@ -1126,6 +1129,7 @@ interval:
             } else if (id(g_morning_day) != day && c >= sm && sm < sfh) {
               morning = true;
               id(g_morning_day) = day;
+              ESP_LOGI("heater", "Morning drying: start at %.0f pF", c);
             }
           }
           id(g_morning) = morning;
