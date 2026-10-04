@@ -477,6 +477,8 @@ The firmware is open source under the GPL. The hardware is free for private and 
 | Hardware, fabrication files, sensor holder, documentation | [CC BY-NC-SA 4.0](LICENSES/CC-BY-NC-SA-4.0.txt) |
 | Firmware, blueprint, tools | [GPL-3.0-or-later](LICENSES/GPL-3.0.txt) |
 
+If you build on this project, a mention with a link back to this repository is appreciated. This is a friendly request, not an extra license condition.
+
 Details, including passing on spare boards at cost, in [`LICENSE.md`](LICENSE.md).
 
 <sub>RC-SPC1KA is a product of Radiocontrolli S.r.l. This project is independent and not affiliated with or endorsed by Radiocontrolli.</sub>

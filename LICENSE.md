@@ -7,6 +7,8 @@ The hardware is free for private and other non-commercial use. Commercial use of
 
 Passing on spare boards or kits from your own order at cost (no profit) is fine and does not count as commercial use.
 
+If you build on this project, a mention with a link back to this repository is appreciated. This is a friendly request, not an extra license condition.
+
 Copyright (c) 2026 Heronidas (https://github.com/Heronidas)
 
 Third-party material keeps its own license: KiCad library symbols, footprints and 3D models (CC-BY-SA 4.0 with the KiCad design exception), and ESPHome, which the firmware configures.
