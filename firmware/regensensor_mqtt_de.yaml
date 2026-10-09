@@ -38,32 +38,25 @@ substitutions:
   c_nass_max: "5000.0"   # pF, used when the oscillator stops (0 Hz)
 
   # Precipitation: rise thresholds are runtime numbers ("Niesel Erkennung",
-  # "Regen Erkennung"; dew rises a few pF/min). Below rate_ruhig the level
-  # counts as steady for "Regenende nach".
+  # "Regen Erkennung"; dew and fog rise a few pF/min). Below rate_ruhig the
+  # level counts as steady for "Regenende nach".
   rate_ruhig: "10"       # pF/min
+  # No drizzle from the rise this long after heating: the warm plate takes up
+  # humidity again at up to ~30 pF/min.
+  niesel_sperre_s: "420"
   # After a rain end the heater dries the surface. Still at the rain level
   # after this many seconds of drying = still raining, rain is set again.
   regen_heiztest: "180"  # s
 
-  # Hysteresis against flicker at thresholds: capacitance states fall back
-  # below 95 % of their threshold, dew 0.5 °C above its threshold.
+  # Hysteresis against flicker: the display state falls back below 95 % of its threshold.
   hyst_faktor: "0.95"
-  hyst_tau: "0.5"        # °C
+  # The heater runs down to this share of the heating threshold: fewer, longer pulses.
+  hyst_heizung: "0.85"
 
-  # Dew fallback without a dew point: slow wetting in the dark.
-  lux_nacht: "5"         # lx
-  # Morning drying ("Morgentrocknung ab") from this brightness on.
-  lux_morgen: "100"      # lx
-  morgen_abstand: "0.0"  # °C above the dew point (own limit, not "Tauschwelle")
-
-  # Outdoor air for the dew point via MQTT: plain numbers (C, %), published
-  # retained. Without messages the sensors stay empty and the fallback applies.
-  aussen_temp_topic: ${name}/aussenluft/temperatur
-  aussen_feuchte_topic: ${name}/aussenluft/feuchte
-  zeitzone: Europe/Berlin
+  zeitzone: Europe/Berlin   # SNTP time zone
 
   # Weather state texts; index stored across sleep (see on_boot).
-  wl_namen: '"trocken", "feucht", "nass", "Tau", "Morgentau", "Abendtau", "Reif", "Niesel", "Regen", "Nebel"'
+  wl_namen: '"trocken", "nass", "Niesel", "Regen"'
 
   # Night mode (deep sleep, RTC timer wake).
   schlaf_intervall: 5min
@@ -80,7 +73,7 @@ esphome:
     then:
       - lambda: |-
           static const char *const N[] = {${wl_namen}};
-          int i = id(g_wetterlage);
+          int i = id(g_lage);
           if (i >= 0 && i < (int)(sizeof(N) / sizeof(N[0]))) id(wetterlage).publish_state(N[i]);
 
 esp32:
@@ -157,11 +150,6 @@ globals:
     restore_value: true
     initial_value: 'NAN'
 
-  # Surface minus dew point in K; NAN without outdoor data.
-  - id: g_taupunkt_abstand
-    type: float
-    initial_value: 'NAN'
-
   # Heater account in seconds: rises while heating, decays in pauses.
   # Persisted, otherwise the limit cannot act across night-mode wakeups.
   - id: g_heiz_sek
@@ -181,8 +169,8 @@ globals:
     restore_value: true
     initial_value: '0'
 
-  # Precipitation latches (set by a fast rise, see the control loop), so heavy
-  # dew is not reported as rain and the heater stays off while it rains.
+  # Precipitation latches (set by a fast rise, see the control loop), so dew
+  # is not reported as rain and the heater stays off while it rains.
   - id: g_regen
     type: bool
     restore_value: true
@@ -214,10 +202,6 @@ globals:
     initial_value: '0'
 
   # Held states behind the hysteresis (see hyst_* above).
-  - id: g_tau
-    type: bool
-    restore_value: true
-    initial_value: 'false'
   - id: g_anz          # capacitance at or above the display threshold
     type: bool
     restore_value: true
@@ -226,20 +210,23 @@ globals:
     type: bool
     restore_value: true
     initial_value: 'false'
-  - id: g_morgen       # morning drying running
-    type: bool
+
+  # Last published weather state (index into wl_namen, -1 = none).
+  - id: g_lage
+    type: int
     restore_value: true
-    initial_value: 'false'
-  - id: g_morgen_tag   # day of the last morning drying (year * 1000 + day)
+    initial_value: '-1'
+
+  # Unix time of the last loop run with the heater on (drizzle pause).
+  - id: g_heiz_ts
     type: uint32_t
     restore_value: true
     initial_value: '0'
 
-  # Last published weather state (index into wl_namen, -1 = none).
-  - id: g_wetterlage
-    type: int
-    restore_value: true
-    initial_value: '-1'
+  # Oscillator stalled (0 Hz or c at or above c_nass_max): leakage, not a reading.
+  - id: g_steht
+    type: bool
+    initial_value: 'false'
 
   # Last known "inside night window", fallback when the clock is missing.
   - id: g_nacht
@@ -264,12 +251,13 @@ number:
     max_value: 30000
     step: 1
     initial_value: ${c_freq_referenz_start}
-    restore_value: true
-    optimistic: true
-    mode: box
-    entity_category: config
+    <<: &number_cfg
+      restore_value: true
+      optimistic: true
+      mode: box
+      entity_category: config
 
-  # From here the weather state shows humidity/dew, no heating.
+  # From here the weather state shows "nass".
   - platform: template
     name: "Anzeigeschwelle"
     id: schwelle_anzeige
@@ -278,26 +266,7 @@ number:
     max_value: 1500
     step: 10
     initial_value: 110
-    restore_value: true
-    optimistic: true
-    mode: box
-    entity_category: config
-
-  # Dew from this surface-minus-dew-point distance down (sensor and outdoor
-  # sensor differ in place and exposure, so tune it on a dewy morning).
-  - platform: template
-    name: "Tauschwelle"
-    id: schwelle_tau
-    unit_of_measurement: "°C"
-    device_class: temperature_delta
-    min_value: 0
-    max_value: 5
-    step: 0.1
-    initial_value: 2.0
-    restore_value: true
-    optimistic: true
-    mode: box
-    entity_category: config
+    <<: *number_cfg
 
   # VEML7700 sits behind a cover; this compensates for its attenuation.
   # No precise measurement exists, so tune against a known outdoor lux value.
@@ -309,12 +278,9 @@ number:
     max_value: 5
     step: 0.1
     initial_value: 1.6
-    restore_value: true
-    optimistic: true
-    mode: box
-    entity_category: config
+    <<: *number_cfg
 
-  # From here the automation heats ("Feucht" turns on), unless it rains.
+  # From here the automation heats ("Feucht" turns on), unless it rains or drizzles.
   - platform: template
     name: "Feuchtigkeitsschwelle"
     id: schwelle_feucht
@@ -323,43 +289,9 @@ number:
     max_value: 1500
     step: 10
     initial_value: 200
-    restore_value: true
-    optimistic: true
-    mode: box
-    entity_category: config
+    <<: *number_cfg
 
-  # Morning drying, once a day: 04-11 h, light, surface above the dew point
-  # (morgen_abstand), level at least this: one heat pulse up to
-  # "Morgentrocknung Temperatur". At or above "Feuchtigkeitsschwelle": off.
-  - platform: template
-    name: "Morgentrocknung ab"
-    id: schwelle_morgen
-    unit_of_measurement: "pF"
-    min_value: 100
-    max_value: 1500
-    step: 10
-    initial_value: 150
-    restore_value: true
-    optimistic: true
-    mode: box
-    entity_category: config
-
-  # Target of the morning pulse; normal heating stays at temp_aus.
-  - platform: template
-    name: "Morgentrocknung Temperatur"
-    id: morgen_temp
-    unit_of_measurement: "°C"
-    min_value: 45
-    max_value: 60
-    step: 1
-    initial_value: 55
-    restore_value: true
-    optimistic: true
-    mode: box
-    entity_category: config
-
-  # Rain level: rain needs this level plus a fast rise ("Regen Erkennung")
-  # or a surface clearly above the dew point.
+  # Rain level: rain needs this level plus a fast rise ("Regen Erkennung") or drizzle.
   - platform: template
     name: "Regenschwelle"
     id: schwelle_regen
@@ -368,24 +300,18 @@ number:
     max_value: 5000
     step: 50
     initial_value: 500
-    restore_value: true
-    optimistic: true
-    mode: box
-    entity_category: config
+    <<: *number_cfg
 
   # Rise that counts as precipitation; also blocks the heater.
   - platform: template
     name: "Niesel Erkennung"
     id: rate_niesel
     unit_of_measurement: "pF/min"
-    min_value: 10
+    min_value: 5
     max_value: 500
-    step: 5
-    initial_value: 60
-    restore_value: true
-    optimistic: true
-    mode: box
-    entity_category: config
+    step: 1
+    initial_value: 18
+    <<: *number_cfg
 
   - platform: template
     name: "Regen Erkennung"
@@ -395,10 +321,7 @@ number:
     max_value: 1000
     step: 10
     initial_value: 150
-    restore_value: true
-    optimistic: true
-    mode: box
-    entity_category: config
+    <<: *number_cfg
 
   # Drizzle and rain end after this long without a rise.
   - platform: template
@@ -409,10 +332,7 @@ number:
     max_value: 60
     step: 1
     initial_value: 7
-    restore_value: true
-    optimistic: true
-    mode: box
-    entity_category: config
+    <<: *number_cfg
 
   # Heating limit against continuous fog/drizzle.
   - platform: template
@@ -423,10 +343,7 @@ number:
     max_value: 30
     step: 1
     initial_value: 15
-    restore_value: true
-    optimistic: true
-    mode: box
-    entity_category: config
+    <<: *number_cfg
 
   # Night window in half hours (22.5 = 22:30), may span midnight. Equal values = never sleep.
   - platform: template
@@ -437,10 +354,7 @@ number:
     max_value: 23.5
     step: 0.5
     initial_value: 22
-    restore_value: true
-    optimistic: true
-    mode: box
-    entity_category: config
+    <<: *number_cfg
 
   - platform: template
     name: "Nachtmodus bis"
@@ -450,10 +364,7 @@ number:
     max_value: 23.5
     step: 0.5
     initial_value: 5
-    restore_value: true
-    optimistic: true
-    mode: box
-    entity_category: config
+    <<: *number_cfg
 
   # Pause minutes per heating minute: duty limit 1/(1+x), 6 -> 14 %.
   - platform: template
@@ -464,10 +375,7 @@ number:
     max_value: 20
     step: 1
     initial_value: 6
-    restore_value: true
-    optimistic: true
-    mode: box
-    entity_category: config
+    <<: *number_cfg
 
   - platform: template
     name: "Heizpause"
@@ -477,14 +385,10 @@ number:
     max_value: 1440
     step: 30
     initial_value: 120
-    restore_value: true
-    optimistic: true
-    mode: box
-    entity_category: config
+    <<: *number_cfg
 
-  # Fine trim of the surface temperature (coarse: adc_faktor). Calibrate only
-  # against air temperature in the daytime: at night the plate is correctly
-  # colder than the air, that is the dew signal.
+  # Fine trim of the surface temperature (coarse: adc_faktor). Calibrate
+  # against air temperature in the daytime: at night the plate is colder.
   - platform: template
     name: "NTC Offset"
     id: ntc_offset
@@ -493,10 +397,7 @@ number:
     max_value: 5
     step: 0.1
     initial_value: 0
-    restore_value: true
-    optimistic: true
-    mode: box
-    entity_category: config
+    <<: *number_cfg
 
 
 sensor:
@@ -512,7 +413,7 @@ sensor:
         - lambda: |-
             return isnan(x) ? x : x * id(glasfaktor).state;
 
-  # Rough lux -> W/m2 for daylight; classification uses only day/night.
+  # Rough lux -> W/m2 for daylight; not used by the classification.
   - platform: template
     name: "Sonneneinstrahlung"
     unit_of_measurement: "W/m²"
@@ -531,7 +432,6 @@ sensor:
     update_interval: 8s
     temperature:
       name: "Box Temperatur"
-      id: box_temperatur
       entity_category: diagnostic
       accuracy_decimals: 1
     humidity:
@@ -605,10 +505,9 @@ sensor:
           float o = id(ntc_offset).state;
           return isnan(o) ? x : x + o;
 
-  # Smoothed copy for display and dew logic (15 s mean, new value every 5 s).
+  # Smoothed copy for display (15 s mean, new value every 5 s).
   - platform: copy
     source_id: sensor_temperatur
-    id: temp_ruhig
     name: "Oberflächentemperatur"
     accuracy_decimals: 1
     filters:
@@ -635,7 +534,8 @@ sensor:
           window_size: 5
     on_value:
       - lambda: |-
-          // 0 Hz: oscillator stopped, surface conducts, treat as wet.
+          // Stalled or sputtering oscillator: the surface leaks, treat as wet
+          // but give no rate, so the latches cannot fire on it.
           float c_pf;
           float fref = id(freq_referenz).state;
           if (isnan(x) || x <= 0.0f) {
@@ -645,11 +545,17 @@ sensor:
           } else {
             c_pf = fref * 100.0f / x;
           }
+          bool steht = c_pf >= ${c_nass_max};
+          if (steht != id(g_steht))
+            ESP_LOGW("kapazitaet", "%s", steht ? "Oscillator stalled" : "Oscillator running again");
+          id(g_steht) = steht;
+          if (steht) c_pf = ${c_nass_max};
           id(kapazitaet).publish_state(c_pf);
 
           float rate = NAN;
           auto jetzt = id(uhr).now();
-          if (jetzt.is_valid()) {
+          // While stalled keep the last good sample as the rate base.
+          if (!steht && jetzt.is_valid()) {
             uint32_t t  = jetzt.timestamp;
             float    v  = id(c_vorher);
             uint32_t t0 = id(g_rate_stamp);
@@ -682,25 +588,17 @@ sensor:
     state_class: measurement
     accuracy_decimals: 0
     filters:
-      - lambda: |-
-          //                pF     %
-          static const float P[][2] = {
-            { 100.0f,   0.0f },   // dry
-            { 180.0f,  25.0f },
-            { 280.0f,  40.0f },
-            { 390.0f,  50.0f },
-            { 550.0f, 100.0f },
-          };
-          const int N = sizeof(P) / sizeof(P[0]);
-          if (isnan(x)) return NAN;
-          if (x <= P[0][0]) return 0.0f;
-          for (int i = 1; i < N; i++) {
-            if (x <= P[i][0]) {
-              float f = (x - P[i-1][0]) / (P[i][0] - P[i-1][0]);
-              return P[i-1][1] + f * (P[i][1] - P[i-1][1]);
-            }
-          }
-          return 100.0f;
+      - calibrate_linear:
+          method: exact
+          datapoints:
+            - 100 -> 0     # dry
+            - 180 -> 25
+            - 280 -> 40
+            - 390 -> 50
+            - 550 -> 100
+      - clamp:
+          min_value: 0
+          max_value: 100
 
   # Rate in pF/min from real time; published by the frequency on_value.
   - platform: template
@@ -734,54 +632,6 @@ sensor:
     update_interval: 30s
     entity_category: diagnostic
     lambda: 'return id(g_sperre_sek) / 60.0f;'
-
-  # Outdoor air via MQTT (optional, see substitutions).
-  - platform: mqtt_subscribe
-    id: aussen_temperatur
-    topic: ${aussen_temp_topic}
-    internal: true
-
-  - platform: mqtt_subscribe
-    id: aussen_feuchte
-    topic: ${aussen_feuchte_topic}
-    internal: true
-
-  - platform: template
-    name: "Taupunkt"
-    id: taupunkt
-    entity_category: diagnostic
-    unit_of_measurement: "°C"
-    device_class: temperature
-    state_class: measurement
-    accuracy_decimals: 1
-    update_interval: 15s
-    lambda: |-
-      float t  = id(aussen_temperatur).state;
-      float rh = id(aussen_feuchte).state;
-      if (isnan(t) || isnan(rh) || rh <= 0.0f) return NAN;
-      float a = logf(rh / 100.0f) + (17.62f * t) / (243.12f + t);
-      return 243.12f * a / (17.62f - a);
-
-  # Surface minus dew point: at or below zero, water condenses. Below 0 C on
-  # the surface the frost point (Magnus over ice) is used, up to ~1 K higher.
-  - platform: template
-    name: "Abstand zum Taupunkt"
-    entity_category: diagnostic
-    unit_of_measurement: "°C"
-    device_class: temperature_delta
-    state_class: measurement
-    accuracy_decimals: 1
-    update_interval: 15s
-    lambda: |-
-      float ts = id(temp_ruhig).state;
-      float td = id(taupunkt).state;
-      if (!isnan(ts) && !isnan(td) && ts <= 0.0f && td < 0.0f) {
-        float g = 17.62f * td / (243.12f + td);
-        td = 272.62f * g / (22.46f - g);
-      }
-      float d = (isnan(ts) || isnan(td)) ? NAN : (ts - td);
-      id(g_taupunkt_abstand) = d;
-      return d;
 
   - platform: wifi_signal
     name: "WLAN Signal"
@@ -872,6 +722,12 @@ binary_sensor:
     device_class: problem
     lambda: 'return id(g_sperre_sek) > 0;'
 
+  - platform: template
+    name: "Oszillator steht"
+    device_class: problem
+    entity_category: diagnostic
+    lambda: 'return id(g_steht);'
+
 
 switch:
   # Boost enable + heater MOSFET. ALWAYS_OFF: a crash while heating must not
@@ -910,15 +766,11 @@ switch:
 
 
 text_sensor:
-  # Weather state. Capacitance says how wet, rate and dew point say why:
+  # Weather state. Capacitance says how wet, the rise says whether it falls:
   #   trocken   below the display threshold
-  #   feucht    thin film, not growing
-  #   nass      wet surface, not growing (also right after rain)
+  #   nass      wet surface without precipitation (dew, fog, drying after rain)
   #   Niesel    precipitation latch below rain
   #   Regen     rain latch, or drying after a rain end at rain level
-  #   Tau       surface at or below the dew point (without one: slow wetting
-  #             in the dark), above 0 °C (Morgentau 04-11 h, Abendtau 17-23 h)
-  #   Reif      same, at or below 0 °C
   - platform: template
     name: "Wetterlage"
     id: wetterlage
@@ -928,50 +780,18 @@ text_sensor:
       - lambda: |-
           static const char *const N[] = {${wl_namen}};
           for (int i = 0; i < (int)(sizeof(N) / sizeof(N[0])); i++)
-            if (x == N[i]) id(g_wetterlage) = i;
+            if (x == N[i]) id(g_lage) = i;
     lambda: |-
       float c  = id(kapazitaet).state;
       float sa = id(schwelle_anzeige).state;
-      float sf = id(schwelle_feucht).state;
-      // No value yet (boot, wake from night mode): keep the last state.
-      if (isnan(c) || isnan(sf)) return {};
-      // Display threshold above the heating threshold: only sf applies.
-      if (isnan(sa) || sa > sf) sa = sf;
-
+      // No value yet (boot, wake from night mode) or stalled: keep the last state.
+      if (isnan(c) || isnan(sa) || id(g_steht)) return {};
       // Latches are kept by the control loop, only read here.
       id(g_anz) = id(g_anz) ? c >= sa * ${hyst_faktor} : c >= sa;
-      bool regen = id(g_regen) || id(g_regen_ende);
-      if (regen || id(g_niesel) || !id(g_anz)) id(g_tau) = false;
-      if (regen)        return {"Regen"};
+      if (id(g_regen) || id(g_regen_ende)) return {"Regen"};
       if (!id(g_anz))   return {"trocken"};
       if (id(g_niesel)) return {"Niesel"};
-
-      // Dew from the threshold down.
-      float dp = id(g_taupunkt_abstand);
-      float ts = id(temp_ruhig).state;
-      bool tau;
-      if (!isnan(dp)) {
-        float st = id(schwelle_tau).state;
-        tau = id(g_tau) ? dp <= st + ${hyst_tau} : dp <= st;
-      } else {
-        // Fallback: slow wetting (no precipitation latch) in the dark.
-        // Right after a wake neither value is there yet: keep the last state.
-        float lux = id(helligkeit).state;
-        if (isnan(lux) && millis() < 60000) return {};
-        tau = !isnan(lux) && lux < ${lux_nacht};
-      }
-      id(g_tau) = tau;
-      if (tau) {
-        if (!isnan(ts) && ts <= 0.0f) return {"Reif"};
-        auto t = id(uhr).now();
-        if (t.is_valid() && t.hour >= 4 && t.hour < 11) return {"Morgentau"};
-        if (t.is_valid() && t.hour >= 17 && t.hour < 23) return {"Abendtau"};
-        return {"Tau"};
-      }
-
-      // Fog: not detected yet, see the roadmap in the wiki.
-
-      return id(g_feucht) ? std::string("nass") : std::string("feucht");
+      return {"nass"};
 
   - platform: version
     name: "ESPHome Version"
@@ -991,31 +811,32 @@ interval:
           float c  = id(kapazitaet).state;
           float sr = id(schwelle_regen).state;
           auto  jz = id(uhr).now();
+          if (heiz_an && jz.is_valid()) id(g_heiz_ts) = jz.timestamp;
 
           // 0a) Precipitation latches. Level alone cannot separate rain from
-          // dew (dense condensate reaches rain levels), but precipitation
-          // rises ~100x faster and dew forms only at or below the dew point.
-          //   Niesel: rise >= "Niesel Erkennung".
-          //   Regen:  rain level plus a rise >= "Regen Erkennung", or a
-          //           surface clearly above the dew point.
+          // dew or fog, but precipitation rises much faster.
+          //   Niesel: rise >= "Niesel Erkennung" (not within niesel_sperre_s
+          //           after heating).
+          //   Regen:  rain level plus a rise >= "Regen Erkennung", or drizzle
+          //           that reaches the rain level.
           // Both end when the rate stays below rate_ruhig for
           // "Regenende nach" (the heater then dries the surface) or when the
           // level falls back.
-          // Runs first so it also runs in manual mode.
-          if (!isnan(c) && !isnan(sr)) {
+          // Runs first so it also runs in manual mode. Frozen while stalled.
+          if (!isnan(c) && !isnan(sr) && !id(g_steht)) {
             float rr = id(kapazitaet_rate).state;
             float rn = id(rate_niesel).state;
             float rg = id(rate_regen).state;
-            float dp = id(g_taupunkt_abstand);
             float sa = id(schwelle_anzeige).state;
+            uint32_t h = id(g_heiz_ts);
+            bool warm = heiz_an || (h != 0 && jz.is_valid() && jz.timestamp - h < ${niesel_sperre_s});
 
             bool vorher = id(g_niesel) || id(g_regen);
-            if (!isnan(rr) && !isnan(rn) && rr >= rn) id(g_niesel) = true;
+            if (!warm && !isnan(rr) && !isnan(rn) && rr >= rn) id(g_niesel) = true;
             if (c >= sr && !id(g_regen)) {
-              bool schnell   = !isnan(rr) && !isnan(rg) && rr >= rg;
-              bool ueber_tau = !isnan(dp) && dp > 0.5f;
-              // After a rain end only a new fast rise counts.
-              if (schnell || (ueber_tau && !id(g_regen_ende))) {
+              bool schnell = !isnan(rr) && !isnan(rg) && rr >= rg;
+              // Drizzle grown to the rain level is rain; after a rain end only a new fast rise counts.
+              if (schnell || (id(g_niesel) && !id(g_regen_ende))) {
                 id(g_regen) = true;
                 id(g_regen_ende) = false;
               }
@@ -1049,7 +870,7 @@ interval:
           // the "Feucht" sensor; runs before any early return.
           float sfh = id(schwelle_feucht).state;
           if (!isnan(c) && !isnan(sfh))
-            id(g_feucht) = id(g_feucht) ? c >= sfh * ${hyst_faktor} : c >= sfh;
+            id(g_feucht) = id(g_feucht) ? c >= sfh * ${hyst_heizung} : c >= sfh;
 
           // 0b) Elapsed time. Account and lockout run in real time: in night
           // mode this loop stalls (35 s awake per 5 min). Without a clock
@@ -1085,15 +906,8 @@ interval:
 
           // 1) Safety, always (also manual). NaN includes an implausible
           // resistance, i.e. a wiring fault.
-          // The morning pulse may heat up to "Morgentrocknung Temperatur".
-          float tm = id(morgen_temp).state;
-          float grenze = (id(g_morgen) && !isnan(tm)) ? tm : ${temp_aus};
-          if (isnan(t) || t >= grenze) {
+          if (isnan(t) || t >= ${temp_aus}) {
             if (heiz_an) id(heizung).turn_off();
-            if (!isnan(t) && id(g_morgen)) {
-              id(g_morgen) = false;  // morning pulse done
-              ESP_LOGI("heizung", "Morning drying: done at %.1f C", t);
-            }
             return;
           }
 
@@ -1102,38 +916,15 @@ interval:
           if (!id(automatikbetrieb).state) return;
 
           // 3) Heat when wet, never during precipitation (the sensor has to
-          // see it, and the heater cannot keep up with rain), and not during
-          // dew or frost (it forms again at once); drying follows when the
-          // dew ends. After a rain end the surface is always dried.
+          // see it, and the heater cannot keep up with rain). Dew and fog are
+          // dried too: they wet the plate slowly, and a dry plate stays
+          // sensitive. After a rain end the surface is always dried.
           if (isnan(c) || isnan(sr) || isnan(sfh)) {
             if (heiz_an) id(heizung).turn_off();
             return;
           }
-          bool soll = id(g_feucht) && !id(g_regen) && !id(g_niesel) &&
-                      (!id(g_tau) || id(g_regen_ende));
-
-          // Morning drying, once a day: once it is light and the surface is
-          // above the dew point, one heat pulse up to morgen_temp for a surface
-          // still above "Morgentrocknung ab" (ends early once it reads dry).
-          float sm  = id(schwelle_morgen).state;
-          float lux = id(helligkeit).state;
-          float da  = id(g_taupunkt_abstand);
-          bool kein_tau = isnan(da) ? !id(g_tau) : da > ${morgen_abstand};
-          bool morgen = false;
-          if (!isnan(sm) && jz.is_valid() && jz.hour >= 4 && jz.hour < 11 &&
-              !isnan(lux) && lux >= ${lux_morgen} && kein_tau && id(g_anz) &&
-              !id(g_regen) && !id(g_niesel) && !id(g_regen_ende)) {
-            uint32_t tag = jz.year * 1000 + jz.day_of_year;
-            if (id(g_morgen)) {
-              morgen = true;
-            } else if (id(g_morgen_tag) != tag && c >= sm && sm < sfh) {
-              morgen = true;
-              id(g_morgen_tag) = tag;
-              ESP_LOGI("heizung", "Morning drying: start at %.0f pF", c);
-            }
-          }
-          id(g_morgen) = morgen;
-          soll = soll || morgen;
+          // Stalled: heat anyway, drying may clear the leak (heating limit applies).
+          bool soll = id(g_feucht) && (id(g_steht) || (!id(g_regen) && !id(g_niesel)));
 
           // 4) Heating limit: in fog the surface gets wet faster than it
           // dries. Exceeding the maximum triggers a fixed pause.
@@ -1151,7 +942,7 @@ interval:
 
           // 5) Heater test after a rain end: still at the rain level after
           // regen_heiztest seconds of drying = it is still raining.
-          if (soll && id(g_regen_ende)) {
+          if (soll && id(g_regen_ende) && !id(g_steht)) {
             id(g_trocknen_sek) += dt;
             if (c >= sr && id(g_trocknen_sek) >= ${regen_heiztest}) {
               id(g_regen) = true;

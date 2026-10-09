@@ -14,12 +14,11 @@
 
 **Home Assistant**
 - [Entities](Entities.md)
-- [Outdoor air and blueprint](Outdoor-Air.md)
 - [MQTT and web page](MQTT-and-Web-Page.md)
 
 **How it works**
 - [Measurement](How-It-Works.md#measurement)
-- [Rain, drizzle or dew](How-It-Works.md#rain-drizzle-or-dew)
+- [Rain or not](How-It-Works.md#rain-or-not)
 - [Heater](How-It-Works.md#heater)
 
 **Reference**

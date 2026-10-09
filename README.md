@@ -2,7 +2,7 @@
 
 # 🌧️ ESPHome Capacitive Rain Sensor
 
-**A heated, sealed rain sensor for Home Assistant that tells rain from dew.**<br>
+**A heated, sealed rain sensor for Home Assistant that tells rain from dew and fog.**<br>
 RC-SPC1KA sensor element · ESP32 carrier board · ESPHome firmware
 
 [![ESPHome](https://img.shields.io/badge/ESPHome-2026.x-000000?logo=esphome&logoColor=white)](https://esphome.io)
@@ -32,7 +32,7 @@ This project takes a different approach:
 
 - **Sealed capacitive element.** No exposed metal, nothing to corrode. It reacts to a few drops, not to a bucketful.
 - **Heated.** Once the rain stops, the heater dries the surface, so the sensor reports dry within minutes instead of hours. It also clears frost and snow.
-- **Knows what it measures.** Rate of rise and dew point separate rain from dew, fog and humid air, exactly where simple sensors raise false alarms.
+- **Knows what it measures.** Precipitation wets the surface many times faster than dew, fog or humid air; the rate of rise tells them apart without any outdoor sensor, exactly where simple sensors raise false alarms.
 - **Fully adjustable.** Hardware and firmware are published in full. Thresholds, heater limits and night mode are runtime settings in Home Assistant or on the device's own web page; no reflash needed.
 
 ### Typical uses
@@ -41,7 +41,7 @@ This project takes a different approach:
 - Close roof windows, skylights, awnings or a pergola roof automatically, and open them again once it is dry.
 - Turn on a light when heavy rain darkens the room.
 - Pause irrigation during and right after rain.
-- Log how long and how often it rained; react to frost or snow on the sensor.
+- Log how long and how often it rained.
 - Extend the board with light, pressure, UV or wind sensors and turn it into a small weather station.
 
 ---
@@ -51,24 +51,21 @@ This project takes a different approach:
 <details open>
 <summary><b>Detection</b></summary>
 
-- [x] Weather state: dry, humid, wet, dew (morning/evening), frost, drizzle, rain
+- [x] Weather state: dry, wet, drizzle, rain
 - [x] Drizzle and rain detected by rate of rise, independent of the absolute level
-- [x] Dew and frost detection via the surface-to-dew-point distance (frost point below 0 °C)
-- [x] Fallback without outdoor data: slow wetting in the dark reads as dew
+- [x] No outdoor sensor needed
 - [x] Hysteresis on every threshold, no flickering states
 - [x] Wetting in % (RC-SPC1K datasheet curve)
-- [ ] Fog detection (planned: fast re-wetting after the morning heat pulse)
 
 </details>
 
 <details>
 <summary><b>Heater control</b></summary>
 
-- [x] Dries the surface after rain, dew or frost
-- [x] Morning drying: one short heat pulse a day, once it is light and the surface is above the dew point
+- [x] Keeps the surface dry: dries dew, fog and frost in short pulses, and the film after rain
 - [x] Stays off during drizzle and rain, so the sensor can see the precipitation
 - [x] Rain end detection: no rise for a set time, then a short heater test confirms
-- [x] Over-temperature cut-off at 45 °C (morning pulse: adjustable, at most 60 °C), checked every second
+- [x] Over-temperature cut-off at 45 °C, checked every second
 - [x] Heating-time budget with enforced pause (fog cannot keep it running for hours)
 - [x] Safe defaults: off after reset, off on an implausible NTC reading (open or shorted wire)
 
@@ -79,7 +76,7 @@ This project takes a different approach:
 
 - [x] Home Assistant via the native ESPHome API
 - [x] Standalone variant: local web page and MQTT (FHEM, ioBroker, Node-RED, Home Assistant MQTT discovery)
-- [x] OTA updates over Wi-Fi
+- [x] Encrypted OTA updates over Wi-Fi (Home Assistant variant)
 - [x] Optional night mode: deep sleep with 5 min wake interval
 - [x] Battery voltage monitoring
 - [x] All settings adjustable at runtime, stored across reboots and sleep
@@ -122,7 +119,7 @@ How it got here: [Milestones](docs/wiki/Milestones.md) · What comes next: [Road
 2. **Wiring.** Sensor to the SENSOR and HEATER terminals, 5 V to POWER IN ([wiring](docs/wiki/Wiring.md)).
 3. **Flashing.** Once over the UART header with a device config that loads the firmware from this repository; all later updates go over Wi-Fi ([flashing and updates](docs/wiki/Flashing-and-Updates.md)).
 4. **Calibration.** Enter the dry frequency, check the thresholds ([calibration](docs/wiki/Calibration.md)).
-5. **Home Assistant.** The device is discovered automatically; feed it outdoor air for the dew point ([outdoor air](docs/wiki/Outdoor-Air.md)). Without Home Assistant, use the [MQTT and web page](docs/wiki/MQTT-and-Web-Page.md) variant.
+5. **Home Assistant.** The device is discovered automatically. Without Home Assistant, use the [MQTT and web page](docs/wiki/MQTT-and-Web-Page.md) variant.
 
 ---
 
@@ -134,8 +131,8 @@ The **[wiki](docs/wiki/Home.md)** covers everything in detail:
 |---|---|
 | Getting started | [Parts](docs/wiki/Parts.md) · [Wiring](docs/wiki/Wiring.md) · [Flashing and updates](docs/wiki/Flashing-and-Updates.md) · [Calibration](docs/wiki/Calibration.md) |
 | Build | [Ordering the board](docs/wiki/Ordering-the-Board.md) · [Module build](docs/wiki/Module-Build.md) · [Sensor holder](docs/wiki/Sensor-Holder.md) · [Board dimensions](docs/wiki/Board-Reference.md#dimensions) |
-| Home Assistant | [Entities](docs/wiki/Entities.md) · [Outdoor air and blueprint](docs/wiki/Outdoor-Air.md) · [MQTT and web page](docs/wiki/MQTT-and-Web-Page.md) |
-| How it works | [Measurement, rain or dew, heater](docs/wiki/How-It-Works.md) |
+| Home Assistant | [Entities](docs/wiki/Entities.md) · [MQTT and web page](docs/wiki/MQTT-and-Web-Page.md) |
+| How it works | [Measurement, rain or not, heater](docs/wiki/How-It-Works.md) |
 | Reference | [Board reference](docs/wiki/Board-Reference.md) · [Extensions](docs/wiki/Extensions.md) · [Troubleshooting](docs/wiki/Troubleshooting.md) · [Known limitations](docs/wiki/Known-Limitations.md) |
 | Project | [Milestones](docs/wiki/Milestones.md) · [Roadmap](docs/wiki/Roadmap.md) |
 
@@ -146,7 +143,6 @@ The **[wiki](docs/wiki/Home.md)** covers everything in detail:
 | Path | Content |
 |---|---|
 | `firmware/` | ESPHome firmware: `regensensor_de/_en.yaml` (Home Assistant API), `regensensor_mqtt_de/_en.yaml` (web page and MQTT); `examples/` device configs that load it from GitHub |
-| `blueprints/` | Home Assistant blueprint for outdoor air |
 | `hardware/` | KiCad project (schematic, PCB) |
 | `fabrication/` | Gerbers, drill files, JLCPCB BOM and CPL |
 | `mechanical/` | Sensor holder STL, board outline DXF |
@@ -171,7 +167,7 @@ The firmware is open source under the GPL. The hardware is free for private and 
 | Part | License |
 |---|---|
 | Hardware, fabrication files, sensor holder, documentation | [CC BY-NC-SA 4.0](LICENSES/CC-BY-NC-SA-4.0.txt) |
-| Firmware, blueprint, tools | [GPL-3.0-or-later](LICENSES/GPL-3.0.txt) |
+| Firmware and tools | [GPL-3.0-or-later](LICENSES/GPL-3.0.txt) |
 
 If you build on this project, a mention with a link back to this repository is appreciated. This is a friendly request, not an extra license condition.
 

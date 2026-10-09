@@ -4,8 +4,6 @@
 substitutions:
   name: regensensor
   friendly_name: Regensensor
-  aussen_temp_entity: sensor.outdoor_temperature
-  aussen_feuchte_entity: sensor.outdoor_humidity
 
 packages:
   regensensor:

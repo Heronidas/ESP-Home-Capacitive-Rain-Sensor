@@ -1,7 +1,7 @@
 # Calibration
 
 1. **Dry frequency.** Surface dry, heater off. Average *Frequency* over a few minutes and enter it as *Dry Frequency*. The YAML default (13549 Hz) is only a placeholder from the vendor example.
-2. **NTC.** Reference thermometer next to the head, same air, no sun, heater off for 30 min. Trim with `adc_faktor` (coarse) or *NTC Offset* (fine, ±5 K). Do not calibrate against air temperature under a clear night sky: the plate is legitimately colder, which is the dew signal.
+2. **NTC.** Reference thermometer next to the head, same air, no sun, heater off for 30 min. Trim with `adc_faktor` (coarse) or *NTC Offset* (fine, ±5 K). Do not calibrate against air temperature under a clear night sky: the plate is legitimately colder.
 3. **Thresholds.** Defaults: display 110 pF, heating 200 pF, rain 500 pF. Measured values:
 
    | Condition | Capacitance |
@@ -15,6 +15,5 @@
    | soaked cloth | 870–1240 pF |
 
    Adjust them via the number entities; no reflash.
-4. **Dew threshold.** *Dew Threshold* (default 2 °C) is the surface-minus-dew-point distance from which the state reads dew. The outdoor sensor and the plate sit in different places, so tune it on real dew mornings.
-5. **Humid nights.** Note the maximum capacitance in a humid night without dew and keep the display threshold above it, otherwise humid air alone reads as humid. Dew nights go higher on purpose; the dew point tells them apart (*Distance to Dew Point*).
-6. **First night.** Leave *Auto Mode* off to see the raw values without heater influence.
+4. **Humid nights.** Note the maximum capacitance in a humid night without dew and keep the display threshold above it, otherwise humid air alone reads as wet.
+5. **First night.** Leave *Auto Mode* off to see the raw values without heater influence.

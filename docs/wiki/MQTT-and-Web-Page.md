@@ -4,6 +4,5 @@
 
 - **Web page.** `http://<device-ip>/` shows all states and settings and accepts OTA uploads. Served by the device itself, no internet or login required; keep it in a trusted network.
 - **MQTT.** `secrets.yaml` additionally needs `mqtt_broker`, `mqtt_username` and `mqtt_password`. States go to `regensensor/<component>/<name>/state` (EN: `rain-sensor/…`), retained. Birth, will and shutdown messages are off, so the last states stay visible while the device sleeps.
-- **Outdoor air.** Publish plain numbers, retained, to `regensensor/aussenluft/temperatur` (°C) and `regensensor/aussenluft/feuchte` (%) (EN: `rain-sensor/outdoor/temperature`, `rain-sensor/outdoor/humidity`). The last retained value counts as current, so stop by clearing the topic, not by going silent.
 - **Time.** From SNTP (`zeitzone` / `timezone` substitution, default Europe/Berlin).
 - **Night mode.** Commands sent while the device sleeps are lost, as with the API. Switch night mode off while it is awake.

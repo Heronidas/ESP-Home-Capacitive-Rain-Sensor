@@ -4,8 +4,6 @@
 substitutions:
   name: rain-sensor
   friendly_name: Rain Sensor
-  outdoor_temp_entity: sensor.outdoor_temperature
-  outdoor_humidity_entity: sensor.outdoor_humidity
 
 packages:
   rain_sensor:
