@@ -42,7 +42,7 @@ substitutions:
   # No drizzle while the plate cools (after heating or when the sun goes):
   # it takes up humidity again at up to ~40 pF/min.
   niesel_sperre_s: "420"   # after heating
-  abkuehl_k: "2.0"         # K below the peak of the last abkuehl_s
+  abkuehl_k: "2.0"         # K below the peak of the last 5-10 min (abkuehl_s windows)
   abkuehl_s: "300"
   # Stalled oscillator: heat at most this long per stall to dry the leak, then wait.
   steht_heiz_max_s: "600"
@@ -196,11 +196,14 @@ globals:
     restore_value: true
     initial_value: '0'
 
-  # Surface temperature peak and its time (cooling check for drizzle).
+  # Surface temperature peaks of the current and previous window (cooling check for drizzle).
   - id: g_t_spitze
     type: float
     initial_value: 'NAN'
-  - id: g_t_spitze_ts
+  - id: g_t_spitze_alt     # peak of the previous window
+    type: float
+    initial_value: 'NAN'
+  - id: g_t_fenster        # current window (unix time / abkuehl_s)
     type: uint32_t
     initial_value: '0'
 
@@ -726,8 +729,15 @@ interval:
           float sr = id(schwelle_regen).state;
           auto  jz = id(uhr).now();
           if (heiz_an && jz.is_valid()) id(g_heiz_ts) = jz.timestamp;
-          if (!isnan(t) && jz.is_valid() && !(t < id(g_t_spitze) && jz.timestamp - id(g_t_spitze_ts) <= ${abkuehl_s})) {
-            id(g_t_spitze) = t; id(g_t_spitze_ts) = jz.timestamp;
+          if (!isnan(t) && jz.is_valid()) {
+            uint32_t w = jz.timestamp / ${abkuehl_s};
+            if (w != id(g_t_fenster)) {
+              id(g_t_spitze_alt) = (w == id(g_t_fenster) + 1) ? id(g_t_spitze) : NAN;
+              id(g_t_spitze) = t;
+              id(g_t_fenster) = w;
+            } else if (!(t <= id(g_t_spitze))) {
+              id(g_t_spitze) = t;
+            }
           }
 
           // 0a) Precipitation latches. Level alone cannot separate rain from
@@ -745,7 +755,7 @@ interval:
             float rg = id(rate_regen).state;
             uint32_t h = id(g_heiz_ts);
             bool warm = heiz_an || (h != 0 && jz.is_valid() && jz.timestamp - h < ${niesel_sperre_s})
-                        || id(g_t_spitze) - t >= ${abkuehl_k};
+                        || fmaxf(id(g_t_spitze), id(g_t_spitze_alt)) - t >= ${abkuehl_k};
 
             bool vorher = id(g_niesel) || id(g_regen);
             if (!warm && !isnan(rr) && !isnan(rn) && rr >= rn) id(g_niesel) = true;

@@ -17,7 +17,7 @@ Capacitance says *how* wet, not *why*. Heavy dew reaches the same values as ligh
 | drizzle | ~15–50 pF/min |
 | rain | hundreds of pF/min |
 
-A rise of *Drizzle Detection* (default 18 pF/min) or more latches **drizzle**, except while the plate cools: within 7 minutes after heating, or while the surface is 2 K or more below its peak of the last 5 minutes. From the rain level up, *Rain Detection* (default 150 pF/min) latches **rain**, and so does drizzle that grows to the rain level. Both end after *Rain End After* (default 7 min) without a further rise. Everything else reads **dry**, including dew, fog and a surface drying after rain: only precipitation counts.
+A rise of *Drizzle Detection* (default 18 pF/min) or more latches **drizzle**, except while the plate cools: within 7 minutes after heating, or while the surface is 2 K or more below its peak of the last 5 to 10 minutes (heating, or the sun going behind a cloud). From the rain level up, *Rain Detection* (default 150 pF/min) latches **rain**, and so does drizzle that grows to the rain level. Both end after *Rain End After* (default 7 min) without a further rise. Everything else reads **dry**, including dew, fog and a surface drying after rain: only precipitation counts.
 
 ## Heater
 

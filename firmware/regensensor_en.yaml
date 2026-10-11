@@ -42,7 +42,7 @@ substitutions:
   # No drizzle while the plate cools (after heating or when the sun goes):
   # it takes up humidity again at up to ~40 pF/min.
   drizzle_hold_s: "420"   # after heating
-  cooling_k: "2.0"         # K below the peak of the last cooling_s
+  cooling_k: "2.0"         # K below the peak of the last 5-10 min (cooling_s windows)
   cooling_s: "300"
   # Stalled oscillator: heat at most this long per stall to dry the leak, then wait.
   stall_heat_max_s: "600"
@@ -196,11 +196,14 @@ globals:
     restore_value: true
     initial_value: '0'
 
-  # Surface temperature peak and its time (cooling check for drizzle).
+  # Surface temperature peaks of the current and previous window (cooling check for drizzle).
   - id: g_t_peak
     type: float
     initial_value: 'NAN'
-  - id: g_t_peak_ts
+  - id: g_t_peak_prev     # peak of the previous window
+    type: float
+    initial_value: 'NAN'
+  - id: g_t_window        # current window (unix time / cooling_s)
     type: uint32_t
     initial_value: '0'
 
@@ -726,8 +729,15 @@ interval:
           float sr = id(threshold_rain).state;
           auto  now = id(ha_time).now();
           if (heater_on && now.is_valid()) id(g_heater_ts) = now.timestamp;
-          if (!isnan(t) && now.is_valid() && !(t < id(g_t_peak) && now.timestamp - id(g_t_peak_ts) <= ${cooling_s})) {
-            id(g_t_peak) = t; id(g_t_peak_ts) = now.timestamp;
+          if (!isnan(t) && now.is_valid()) {
+            uint32_t w = now.timestamp / ${cooling_s};
+            if (w != id(g_t_window)) {
+              id(g_t_peak_prev) = (w == id(g_t_window) + 1) ? id(g_t_peak) : NAN;
+              id(g_t_peak) = t;
+              id(g_t_window) = w;
+            } else if (!(t <= id(g_t_peak))) {
+              id(g_t_peak) = t;
+            }
           }
 
           // 0a) Precipitation latches. Level alone cannot separate rain from
@@ -745,7 +755,7 @@ interval:
             float rg = id(rate_rain).state;
             uint32_t h = id(g_heater_ts);
             bool warm = heater_on || (h != 0 && now.is_valid() && now.timestamp - h < ${drizzle_hold_s})
-                        || id(g_t_peak) - t >= ${cooling_k};
+                        || fmaxf(id(g_t_peak), id(g_t_peak_prev)) - t >= ${cooling_k};
 
             bool latched_before = id(g_drizzle) || id(g_rain);
             if (!warm && !isnan(rr) && !isnan(rn) && rr >= rn) id(g_drizzle) = true;

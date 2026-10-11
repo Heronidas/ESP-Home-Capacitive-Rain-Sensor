@@ -31,8 +31,8 @@ Most affordable rain sensors are contact grids that corrode within a season, or 
 This project takes a different approach:
 
 - **Sealed capacitive element.** No exposed metal, nothing to corrode. It reacts to a few drops, not to a bucketful.
-- **Heated.** Once the rain stops, the heater dries the surface, so the sensor reports dry within minutes instead of hours. It also clears frost and snow.
-- **Knows what it measures.** Precipitation wets the surface many times faster than dew, fog or humid air; the rate of rise tells them apart without any outdoor sensor, exactly where simple sensors raise false alarms.
+- **Heated.** Once the rain stops, the heater dries the surface, so the sensor reports dry within minutes instead of hours. It also clears frost.
+- **Knows what it measures.** Precipitation wets the surface many times faster than dew, fog or humid air; the rate of rise tells them apart.
 - **Fully adjustable.** Hardware and firmware are published in full. Thresholds, heater limits and night mode are runtime settings in Home Assistant or on the device's own web page; no reflash needed.
 
 ### Typical uses
@@ -52,9 +52,7 @@ This project takes a different approach:
 <summary><b>Detection</b></summary>
 
 - [x] Weather state: dry, drizzle, rain
-- [x] Drizzle and rain detected by rate of rise, independent of the absolute level
-- [x] No outdoor sensor needed
-- [x] Dew and fog never reported as rain
+- [x] Drizzle and rain detected by rate of rise
 - [x] Wetting in % (RC-SPC1K datasheet curve)
 
 </details>
@@ -62,12 +60,12 @@ This project takes a different approach:
 <details>
 <summary><b>Heater control</b></summary>
 
-- [x] Dries the film after rain, heavy fog and frost; leaves dew alone to save energy
+- [x] Dries the film after rain, heavy fog and frost
 - [x] Stalled oscillator (water at the pads): one 10-minute drying attempt, then waits
 - [x] Stays off during drizzle and rain, so the sensor can see the precipitation
 - [x] Rain end detection: no rise for a set time, then a short heater test confirms
 - [x] Over-temperature cut-off at 45 °C, checked every second
-- [x] Heating-time budget with enforced pause (fog cannot keep it running for hours)
+- [x] Heating-time budget with enforced pause
 - [x] Safe defaults: off after reset, off on an implausible NTC reading (open or shorted wire)
 
 </details>
