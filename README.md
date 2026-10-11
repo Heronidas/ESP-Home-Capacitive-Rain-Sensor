@@ -51,10 +51,10 @@ This project takes a different approach:
 <details open>
 <summary><b>Detection</b></summary>
 
-- [x] Weather state: dry, wet, drizzle, rain
+- [x] Weather state: dry, drizzle, rain
 - [x] Drizzle and rain detected by rate of rise, independent of the absolute level
 - [x] No outdoor sensor needed
-- [x] Hysteresis on every threshold, no flickering states
+- [x] Dew and fog never reported as rain
 - [x] Wetting in % (RC-SPC1K datasheet curve)
 
 </details>
@@ -62,7 +62,8 @@ This project takes a different approach:
 <details>
 <summary><b>Heater control</b></summary>
 
-- [x] Keeps the surface dry: dries dew, fog and frost in short pulses, and the film after rain
+- [x] Dries the film after rain, heavy fog and frost; leaves dew alone to save energy
+- [x] Stalled oscillator (water at the pads): one 10-minute drying attempt, then waits
 - [x] Stays off during drizzle and rain, so the sensor can see the precipitation
 - [x] Rain end detection: no rise for a set time, then a short heater test confirms
 - [x] Over-temperature cut-off at 45 °C, checked every second
@@ -92,7 +93,7 @@ This project takes a different approach:
 - [x] Reverse-polarity protection
 - [x] I2C on Qwiic, pin socket and screw terminal; 8-pin expansion header
 - [x] Supported add-ons: VEML7700 light sensor, HTU21D enclosure climate
-- [ ] BME280, LTR390, anemometer, wind vane, tipping bucket (YAML prepared, untested)
+- [ ] BME280, LTR390, anemometer, wind vane, tipping bucket (snippets in the wiki, untested)
 - [x] 3D-printable sensor holder
 
 </details>
