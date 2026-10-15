@@ -8,4 +8,5 @@
 | Surface temperature NaN, heater never runs | Implausible NTC resistance (open or shorted): check the SENSOR terminal. Deliberate: the heater stays off. |
 | Heater pulses all night | Heating threshold below the dew level (calibration step 4) |
 | Heater stops after 15 min | Heating-time budget (*Max. Heating Time*); resumes after *Heating Pause* |
+| All entities unavailable after swapping the board | Home Assistant still connects to the old board. Add the newly discovered device and choose *Migrate* in the name conflict dialog; entity IDs and history stay. |
 | Device does not wake from night mode | Needs a valid clock and a supply that stays on at low load; switch *Night Mode* off to keep it awake |

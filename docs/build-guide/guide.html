@@ -111,7 +111,7 @@ li { margin-bottom: 1mm; }
 </table></div>
 
 <h3>Tools</h3>
-<p>Soldering iron and solder, multimeter, small screwdriver for the boost potentiometer, wire stripper, heat shrink. For mounting the sensor: neutral-curing adhesive (MS polymer) and Kapton tape.</p>
+<p>Soldering iron and solder, multimeter, small screwdriver for the boost potentiometer, wire stripper, heat shrink. For mounting the sensor: elastic, neutral-curing PU sealant (e.g. Sikaflex).</p>
 
 <h2>2&nbsp;&nbsp;Circuit</h2>
 <p>Four small blocks, all referenced to a common ground. Labels such as <code>GPIO25</code> connect to the ESP32 pin of the same name.</p>
@@ -203,7 +203,7 @@ li { margin-bottom: 1mm; }
   <li><b class="t">Heater driver.</b><br>MOSFET source to GND, drain to the HEAT− terminal. R3 from GPIO13 to the gate, R4 from gate to GND. If you use a ready-made MOSFET module, it usually includes both resistors.</li>
   <li><b class="t">Power.</b><br>5 V to the dev board's 5V/VIN pin and to the boost IN+. Boost OUT+ to the 12 V terminal. Join all grounds at one point.</li>
   <li><b class="t">Optional parts.</b><br>I2C header or terminal (3.3 V, GND, GPIO21, GPIO22), battery divider on GPIO35.</li>
-  <li><b class="t">Sensor cable.</b><br>Solder the cable to the sensor and test it before gluing the sensor into its holder; afterwards nothing can be reworked. Insulate the solder pads on the back (Kapton tape). The back of the element is not corrosion-protected.</li>
+  <li><b class="t">Sensor cable.</b><br>Solder the cable to the sensor and test it before gluing the sensor into its holder; afterwards nothing can be reworked. The back of the element is not corrosion-protected: seal the solder pads and the whole back with the sealant.</li>
 </ol>
 
 <div class="note"><b>Cable length</b>The cable adds capacitance to the OSC line. Keep it as short as practical. The calibration takes it into account, so re-measure the dry frequency after any change to the cable.</div>

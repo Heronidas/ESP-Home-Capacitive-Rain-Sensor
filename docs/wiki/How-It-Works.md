@@ -4,7 +4,7 @@
 
 The sensing capacitor sets the frequency of a relaxation oscillator (SN74HC14 with R1 = 220 kΩ). A wetter surface means a larger capacitance and a lower frequency. The ESP32 counts the pulses with its hardware PCNT peripheral, which is far quieter than software counting. You measure your dry sensor once and enter the result as the dry frequency. That value defines 100 pF; everything else scales from it (`C = f_dry × 100 / f`), so cable length and layout drop out of the calibration.
 
-If water reaches bare metal (an unsealed solder joint or the cable entry), the oscillator stops or sputters. Below 1/50 of the dry frequency the firmware reports "Oszillator steht", sets the capacitance to 5000 pF, holds the weather state and the rain latches, and heats the plate for up to 10 minutes to dry the leak. If it still stalls or sputters after that, the heater waits until the level has fallen below the heating threshold.
+If water reaches bare metal (an unsealed solder joint or the cable entry), the oscillator stops or sputters. Below 1/50 of the dry frequency the firmware reports "Oszillator steht", sets the capacitance to 5000 pF, holds the weather state and the rain latches, and heats the plate for up to 10 minutes to dry the leak. If it still stalls or sputters after that, the heater waits until a reading on the cooled plate is below the heating threshold (a hot plate dries the leak only for a moment).
 
 ## Rain or not
 

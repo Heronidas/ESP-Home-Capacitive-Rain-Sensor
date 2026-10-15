@@ -102,10 +102,10 @@ This project takes a different approach:
 
 | Part | Status |
 |---|---|
-| Firmware | ✅ Running on a perfboard prototype (same pins as the board), tested with spray, drop and soak tests |
+| Firmware | ✅ Running on the Rev A board; detection logic tested on a perfboard prototype in spray, drop and soak tests |
 | Rain detection in real rain | 🟡 Thresholds set from tests, confirmation in real rain pending |
-| Rev A carrier board | 🟡 Ordered, not yet built or tested |
-| Sensor holder | ✅ STL available |
+| Rev A carrier board | 🟡 Built and flashed: boots, Wi-Fi, encrypted OTA, I2C and battery voltage work; test with sensor and heater pending |
+| Sensor holder | 🟡 New 45° holder, STLs available; field test pending |
 | Weather add-ons | ⚪ Prepared in the YAML, untested |
 
 How it got here: [Milestones](docs/wiki/Milestones.md) · What comes next: [Roadmap](docs/wiki/Roadmap.md)
@@ -144,7 +144,7 @@ The **[wiki](docs/wiki/Home.md)** covers everything in detail:
 | `firmware/` | ESPHome firmware: `regensensor_de/_en.yaml` (Home Assistant API), `regensensor_mqtt_de/_en.yaml` (web page and MQTT); `examples/` device configs that load it from GitHub |
 | `hardware/` | KiCad project (schematic, PCB) |
 | `fabrication/` | Gerbers, drill files, JLCPCB BOM and CPL |
-| `mechanical/` | Sensor holder STL, board outline DXF |
+| `mechanical/` | Sensor holder STLs, board outline DXF |
 | `docs/` | Wiki pages (`docs/wiki/`), images, Module Build Guide (PDF) and its source (`docs/build-guide/`) |
 | `tools/` | Python scripts (KiCad 7 `pcbnew`) generating schematic, PCB and fabrication files from `design.py` |
 | `.github/workflows/fab.yml` | CI: DRC and Gerber export |

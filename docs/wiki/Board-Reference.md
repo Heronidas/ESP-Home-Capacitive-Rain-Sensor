@@ -12,7 +12,7 @@
 | Keep-out around each hole | Ø6.8 mm, for screw heads, nuts or standoffs |
 | ESP32 antenna | overhangs the top edge by 6.5 mm, 27 mm from the left edge, 18 mm wide; overall length with antenna 62.5 mm |
 
-For an enclosure or holder: leave about 15 mm above the board for the screw terminals, pin headers and plugged cables, and about 3 mm below for the through-hole solder joints (e.g. 3–5 mm standoffs). The screw terminals sit along the bottom edge, so plan room for the cables there. Keep metal and enclosure walls away from the antenna. Measure your own terminals and headers if you use different parts. JLCPCB adds edge rails for assembly and breaks them off afterwards; small residues can remain at the edges, so allow about 0.5 mm clearance around the board.
+For an enclosure or holder: leave about 15 mm above the board for the screw terminals, pin headers and plugged cables, and about 3 mm below for the through-hole solder joints (e.g. 3–5 mm standoffs). The screw terminals sit along the bottom edge, so plan room for the cables there. Keep metal and enclosure walls away from the antenna, except an optional reflector: a metal plate at least 2 cm (ideally 3 cm) behind the antenna, on the side facing away from the access point, strengthens the signal towards it. Measure your own terminals and headers if you use different parts. JLCPCB adds edge rails for assembly and breaks them off afterwards; small residues can remain at the edges, so allow about 0.5 mm clearance around the board.
 
 [`mechanical/board-outline.dxf`](../../mechanical/board-outline.dxf) holds the outline, the holes, the antenna area and the connector positions for import into CAD (mm, origin at the bottom-left corner, top view; one layer each: OUTLINE, HOLES, ANTENNA, CONNECTORS).
 

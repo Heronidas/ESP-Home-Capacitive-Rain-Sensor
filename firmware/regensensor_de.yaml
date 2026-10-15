@@ -729,6 +729,8 @@ interval:
           float sr = id(schwelle_regen).state;
           auto  jz = id(uhr).now();
           if (heiz_an && jz.is_valid()) id(g_heiz_ts) = jz.timestamp;
+          uint32_t h = id(g_heiz_ts);
+          bool frisch = heiz_an || (h != 0 && jz.is_valid() && jz.timestamp - h < ${niesel_sperre_s});
           if (!isnan(t) && jz.is_valid()) {
             uint32_t w = jz.timestamp / ${abkuehl_s};
             if (w != id(g_t_fenster)) {
@@ -753,9 +755,7 @@ interval:
             float rr = id(kapazitaet_rate).state;
             float rn = id(rate_niesel).state;
             float rg = id(rate_regen).state;
-            uint32_t h = id(g_heiz_ts);
-            bool warm = heiz_an || (h != 0 && jz.is_valid() && jz.timestamp - h < ${niesel_sperre_s})
-                        || fmaxf(id(g_t_spitze), id(g_t_spitze_alt)) - t >= ${abkuehl_k};
+            bool warm = frisch || fmaxf(id(g_t_spitze), id(g_t_spitze_alt)) - t >= ${abkuehl_k};
 
             bool vorher = id(g_niesel) || id(g_regen);
             if (!warm && !isnan(rr) && !isnan(rn) && rr >= rn) id(g_niesel) = true;
@@ -819,8 +819,9 @@ interval:
           if (id(g_heiz_sek) < 0.0f) id(g_heiz_sek) = 0.0f;
           // Leak episode: stalled, or running again but still above the heating
           // level (a sputtering oscillator must not restart the stall budget).
+          // Ends only on a reading after the plate has cooled: heat dries the leak for a moment.
           bool leck = id(g_steht) || id(g_steht_heiz) > 0.0f;
-          if (!id(g_steht) && !id(g_feucht)) id(g_steht_heiz) = 0.0f;
+          if (!id(g_steht) && !id(g_feucht) && !frisch) id(g_steht_heiz) = 0.0f;
           else if (heiz_an && leck) id(g_steht_heiz) += dt;
 
           if (id(g_sperre_sek) > 0 && dt >= 1.0f) {

@@ -1,24 +1,33 @@
 # Sensor holder
 
-`mechanical/sensor-holder.stl`, about 228 × 124 × 50 mm, fits a 256 mm bed. The file contains **three parts; split them in the slicer** (Bambu Studio: right click → Split → To Parts).
+Three parts in `mechanical/`:
 
-<p align="center"><img src="../sensor-holder.png" alt="Sensor holder" width="720"></p>
+| File | Part | Size (mm) |
+|---|---|---|
+| `sensor-holder-main.stl` | Holder with arm, sensor head and wall foot | 70 × 48 × 205 |
+| `sensor-holder-lid.stl` | Bottom lid of the sensor head; gives access for mounting, then glued shut | 57 × 26 × 2 |
+| `sensor-holder-plate.stl` | Adapter to extend the holder (optional) | 59 × 59 × 20 |
+
+The sensor face sits at 45°. At that angle small drops slide off; a steeper face adds little and catches less drizzle.
 
 ## Material and finish
 
-- **ASA, white.** ASA is UV and weather resistant; white keeps the head from heating up in the sun. PLA and PETG are not suitable for permanent outdoor use.
-- FDM prints are not watertight. Seal the printed parts with a clear, UV-stable outdoor lacquer. Keep the sensor face itself free of lacquer.
+- **ASA or ASA-GF, white.** ASA resists UV and weather; white keeps the head from heating up in the sun. PLA and PETG do not last outdoors.
+- FDM prints are not watertight. Prime and paint the printed parts with a UV-stable outdoor finish. Keep the sensor face free of paint.
 
 ## Mounting the sensor
 
 > [!IMPORTANT]
-> The back of the RC-SPC1KA with the heater and NTC solder pads is not protected against corrosion. The bond must be sealed all around the sensor edge so no water reaches the rear.
+> The back of the RC-SPC1KA carries the heater and NTC solder pads without corrosion protection. Seal the back and the whole edge so no water reaches it.
 
-- The prototype uses a transparent MS polymer adhesive (UHU Polymax Express) and Kapton tape over the pads on the back.
-- Neutral-curing adhesives only. Acetic-acid silicone (vinegar smell) attacks solder joints and copper.
-- Degrease the bonding surfaces (isopropanol) and let the adhesive cure fully before going outside.
-- Keep glue off the sensor face and away from the edge where water runs off; a glue bead there holds a water film and reads as wet.
-- Solder the wires and **test the sensor and the VEML7700 before gluing**; afterwards nothing can be reworked.
-- Let the cable leave the holder downwards with a drip loop, and add strain relief. Use an outdoor-rated cable (plain LiYY is not UV resistant).
-- If the VEML7700 sits behind a cover or lacquer, adjust *Glass Factor* (default 1.6); no reflash needed.
+- Solder the wires and **test the sensor and the VEML7700 before gluing**; afterwards you cannot rework anything.
+- Coat the solder pads with a conformal coating (insulating varnish for PCBs) and let it dry fully before sealing; mask the sensor face.
+- Turn the sensor so the solder pads sit at the lower edge and the cable leaves downwards through the slot.
+- Bond the sensor with an elastic, neutral-curing PU sealant such as Sikaflex, and seal the whole back with it. The elastic bond takes up the thermal expansion of the plastic, which would otherwise stress the 0.65 mm ceramic. Acetic-acid silicone (vinegar smell) attacks solder joints and copper.
+- The pedestal is a little smaller than the element, so water drips off all four edges. Keep sealant off the face and off these edges; a bead there holds a water film and reads as wet.
+- Degrease the bonding surfaces (isopropanol). Sikaflex cures from the outside in at about 3 mm per day; a 1 mm layer needs one to two days at room temperature before the holder goes outside.
+- Fit the VEML7700 in the head, then glue the bottom lid shut.
+- Measure the dry frequency again once the sealant has cured (see [Calibration](Calibration.md)).
+- If the VEML7700 sits behind a cover or paint, adjust *Glass Factor* (default 1.6) on an evenly overcast day; no reflash needed.
+- Lead the cable away with a drip loop and add strain relief. Use an outdoor-rated cable (plain LiYY is not UV resistant).
 - Use stainless screws for wall mounting.

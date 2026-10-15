@@ -2,7 +2,7 @@
 
 1. **Dry frequency.** Surface dry, heater off. Average *Frequency* over a few minutes and enter it as *Dry Frequency*. The YAML default (13549 Hz) is only a placeholder from the vendor example.
 2. **NTC.** Reference thermometer next to the head, same air, no sun, heater off for 30 min. Trim with `adc_faktor` (coarse) or *NTC Offset* (fine, ±5 K). Do not calibrate against air temperature under a clear night sky: the plate is legitimately colder.
-3. **Thresholds.** Defaults: heating 300 pF, rain 500 pF. Measured values:
+3. **Thresholds.** Defaults: heating 300 pF, rain 500 pF. Values measured with the earlier 20° holder:
 
    | Condition | Capacitance |
    |---|---|

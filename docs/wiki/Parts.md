@@ -5,7 +5,7 @@
 - 5 V supply, 1.5 A or more. The heater draws about 0.8 A at 5 V (estimated from 3.4 W plus boost losses, not measured). Tested with the Waveshare Solar Power Manager (D).
 - USB-UART adapter with 3.3 V logic for the first flash; updates then go over Wi-Fi
 - Optional: VEML7700 light sensor (I2C 0x10), HTU21D (GY-21) inside the enclosure
-- Cable to the sensor head (the prototype uses 8-core), IP67 enclosure with desiccant. Keep metal and enclosure walls away from the antenna at the board's top edge.
+- Cable to the sensor head (the prototype uses 8-core), IP67 enclosure with desiccant. Keep metal and enclosure walls away from the antenna at the board's top edge; an optional reflector is described in [Board reference](Board-Reference.md#dimensions).
 
 ## The sensor
 

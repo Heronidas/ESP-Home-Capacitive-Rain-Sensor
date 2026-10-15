@@ -753,6 +753,8 @@ interval:
           float sr = id(threshold_rain).state;
           auto  now = id(sntp_time).now();
           if (heater_on && now.is_valid()) id(g_heater_ts) = now.timestamp;
+          uint32_t h = id(g_heater_ts);
+          bool fresh = heater_on || (h != 0 && now.is_valid() && now.timestamp - h < ${drizzle_hold_s});
           if (!isnan(t) && now.is_valid()) {
             uint32_t w = now.timestamp / ${cooling_s};
             if (w != id(g_t_window)) {
@@ -777,9 +779,7 @@ interval:
             float rr = id(capacitance_rate).state;
             float rn = id(rate_drizzle).state;
             float rg = id(rate_rain).state;
-            uint32_t h = id(g_heater_ts);
-            bool warm = heater_on || (h != 0 && now.is_valid() && now.timestamp - h < ${drizzle_hold_s})
-                        || fmaxf(id(g_t_peak), id(g_t_peak_prev)) - t >= ${cooling_k};
+            bool warm = fresh || fmaxf(id(g_t_peak), id(g_t_peak_prev)) - t >= ${cooling_k};
 
             bool latched_before = id(g_drizzle) || id(g_rain);
             if (!warm && !isnan(rr) && !isnan(rn) && rr >= rn) id(g_drizzle) = true;
@@ -843,8 +843,9 @@ interval:
           if (id(g_heat_sec) < 0.0f) id(g_heat_sec) = 0.0f;
           // Leak episode: stalled, or running again but still above the heating
           // level (a sputtering oscillator must not restart the stall budget).
+          // Ends only on a reading after the plate has cooled: heat dries the leak for a moment.
           bool leak = id(g_stalled) || id(g_stall_heat) > 0.0f;
-          if (!id(g_stalled) && !id(g_humid)) id(g_stall_heat) = 0.0f;
+          if (!id(g_stalled) && !id(g_humid) && !fresh) id(g_stall_heat) = 0.0f;
           else if (heater_on && leak) id(g_stall_heat) += dt;
 
           if (id(g_lockout_sec) > 0 && dt >= 1.0f) {
