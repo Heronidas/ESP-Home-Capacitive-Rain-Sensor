@@ -3,7 +3,7 @@
 | Sensor | Connection | Status |
 |---|---|---|
 | RC-SPC1KA (capacitance, NTC, heater) | screw terminals SENSOR / HEATER | ✅ supported |
-| VEML7700 light sensor | I2C (Qwiic, socket or terminal), 0x10 | ✅ supported |
+| VEML7700 light sensor | I2C (socket, header or terminal), 0x10 | ✅ supported |
 | HTU21D temperature / humidity, inside the enclosure | I2C socket labelled HTU21D | ✅ supported |
 | Battery voltage | J1 pin BAT | ✅ supported |
 | BME280 / BMP280 pressure, LTR390 UV | I2C, 3.3 V modules (0x76, 0x53) | ⚪ snippet below, untested |

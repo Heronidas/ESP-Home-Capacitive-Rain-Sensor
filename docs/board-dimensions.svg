@@ -1,56 +1,56 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 848 762" width="848" height="762" font-family="DejaVu Sans,Arial,sans-serif">
-<rect width="848" height="762" fill="#ffffff"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 965 780" width="965" height="780" font-family="DejaVu Sans,Arial,sans-serif">
+<rect width="965" height="780" fill="#ffffff"/>
 <defs><marker id="a" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#334155"/></marker>
 <pattern id="h" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" stroke="#94a3b8" stroke-width="2"/></pattern></defs>
-<rect x="120" y="128.5" width="648.0" height="504.0" rx="2" fill="#e8f3ec" stroke="#1e293b" stroke-width="2"/>
+<rect x="120" y="128.5" width="765.0" height="522.0" rx="2" fill="#e8f3ec" stroke="#1e293b" stroke-width="2"/>
 <rect x="363.0" y="70.0" width="162.0" height="58.5" fill="url(#h)" stroke="#475569" stroke-width="1.2"/>
 <rect x="363.0" y="128.5" width="162.0" height="171.0" fill="#cbd5e1" stroke="#475569" stroke-width="1.2"/>
 <text x="444.0" y="209.5" font-size="13" text-anchor="middle" fill="#1e293b">ESP32 module</text>
 <text x="444.0" y="103.25" font-size="11" text-anchor="middle" fill="#1e293b">antenna</text>
-<rect x="196.5" y="523.5999999999999" width="95.4" height="68.4" fill="#fef3c7" stroke="#b45309" stroke-width="1"/>
-<text x="244.2" y="561.8" font-size="10" text-anchor="middle" fill="#78350f">J1 POWER IN</text>
-<rect x="315.29999999999995" y="523.5999999999999" width="126.89999999999998" height="68.4" fill="#fef3c7" stroke="#b45309" stroke-width="1"/>
-<text x="378.75" y="561.8" font-size="10" text-anchor="middle" fill="#78350f">J6 I2C</text>
-<rect x="465.59999999999997" y="523.5999999999999" width="94.5" height="68.4" fill="#fef3c7" stroke="#b45309" stroke-width="1"/>
-<text x="512.8499999999999" y="561.8" font-size="10" text-anchor="middle" fill="#78350f">J3 HEATER</text>
-<rect x="583.5" y="523.5999999999999" width="94.5" height="68.4" fill="#fef3c7" stroke="#b45309" stroke-width="1"/>
-<text x="630.75" y="561.8" font-size="10" text-anchor="middle" fill="#78350f">J2 SENSOR</text>
-<rect x="720.3000000000001" y="296.79999999999995" width="23.39999999999995" height="91.8" fill="#fef3c7" stroke="#b45309" stroke-width="1"/>
-<text x="732.0" y="346.7" font-size="10" text-anchor="middle" fill="#78350f" transform="rotate(-90 732.0 342.7)">J4 I2C socket</text>
-<rect x="716.6999999999999" y="452.5" width="38.699999999999974" height="54.0" fill="#fef3c7" stroke="#b45309" stroke-width="1"/>
-<text x="736.05" y="483.5" font-size="10" text-anchor="middle" fill="#78350f">Qwiic</text>
-<rect x="594.3" y="143.8" width="23.39999999999995" height="114.30000000000001" fill="#fef3c7" stroke="#b45309" stroke-width="1"/>
-<text x="606.0" y="204.95" font-size="10" text-anchor="middle" fill="#78350f" transform="rotate(-90 606.0 200.95)">J7 UART</text>
+<rect x="189.3" y="522.7" width="136.79999999999998" height="88.20000000000005" fill="#fef3c7" stroke="#b45309" stroke-width="1"/>
+<text x="257.7" y="570.8" font-size="10" text-anchor="middle" fill="#78350f">J1 POWER IN</text>
+<rect x="336.9" y="522.7" width="183.6" height="88.20000000000005" fill="#fef3c7" stroke="#b45309" stroke-width="1"/>
+<text x="428.7" y="570.8" font-size="10" text-anchor="middle" fill="#78350f">J6 I2C</text>
+<rect x="531.3" y="522.7" width="136.79999999999995" height="88.20000000000005" fill="#fef3c7" stroke="#b45309" stroke-width="1"/>
+<text x="599.7" y="570.8" font-size="10" text-anchor="middle" fill="#78350f">J3 HEATER</text>
+<rect x="678.9" y="522.7" width="136.79999999999995" height="88.20000000000005" fill="#fef3c7" stroke="#b45309" stroke-width="1"/>
+<text x="747.3000000000001" y="570.8" font-size="10" text-anchor="middle" fill="#78350f">J2 SENSOR</text>
+<rect x="837.3000000000001" y="310.29999999999995" width="23.39999999999995" height="91.8" fill="#fef3c7" stroke="#b45309" stroke-width="1"/>
+<text x="849.0" y="360.2" font-size="10" text-anchor="middle" fill="#78350f" transform="rotate(-90 849.0 356.2)">J4 I2C socket</text>
+<rect x="804.9" y="310.29999999999995" width="22.5" height="91.8" fill="#fef3c7" stroke="#b45309" stroke-width="1"/>
+<text x="816.15" y="360.2" font-size="10" text-anchor="middle" fill="#78350f" transform="rotate(-90 816.15 356.2)">J5 I2C header</text>
+<rect x="711.3000000000001" y="143.8" width="23.39999999999995" height="114.30000000000001" fill="#fef3c7" stroke="#b45309" stroke-width="1"/>
+<text x="723.0" y="204.95" font-size="10" text-anchor="middle" fill="#78350f" transform="rotate(-90 723.0 200.95)">J7 UART</text>
 <rect x="139.8" y="197.8" width="23.4" height="183.60000000000002" fill="#fef3c7" stroke="#b45309" stroke-width="1"/>
 <text x="151.5" y="293.6" font-size="10" text-anchor="middle" fill="#78350f" transform="rotate(-90 151.5 289.6)">J8 EXPANSION</text>
-<rect x="635.6999999999999" y="177.1" width="57.60000000000005" height="46.8" fill="#fef3c7" stroke="#b45309" stroke-width="1"/>
-<text x="664.5" y="204.5" font-size="10" text-anchor="middle" fill="#78350f">BOOT</text>
-<rect x="635.6999999999999" y="244.60000000000002" width="57.60000000000005" height="46.80000000000001" fill="#fef3c7" stroke="#b45309" stroke-width="1"/>
-<text x="664.5" y="272.0" font-size="10" text-anchor="middle" fill="#78350f">RESET</text>
+<rect x="752.6999999999999" y="177.1" width="57.60000000000005" height="46.8" fill="#fef3c7" stroke="#b45309" stroke-width="1"/>
+<text x="781.5" y="204.5" font-size="10" text-anchor="middle" fill="#78350f">BOOT</text>
+<rect x="752.6999999999999" y="244.60000000000002" width="57.60000000000005" height="46.80000000000001" fill="#fef3c7" stroke="#b45309" stroke-width="1"/>
+<text x="781.5" y="272.0" font-size="10" text-anchor="middle" fill="#78350f">RESET</text>
 <circle cx="151.5" cy="160.0" r="30.599999999999998" fill="none" stroke="#64748b" stroke-dasharray="4 3"/>
 <circle cx="151.5" cy="160.0" r="14.4" fill="#ffffff" stroke="#1e293b" stroke-width="1.5"/>
-<circle cx="736.5" cy="160.0" r="30.599999999999998" fill="none" stroke="#64748b" stroke-dasharray="4 3"/>
-<circle cx="736.5" cy="160.0" r="14.4" fill="#ffffff" stroke="#1e293b" stroke-width="1.5"/>
-<circle cx="151.5" cy="601.0" r="30.599999999999998" fill="none" stroke="#64748b" stroke-dasharray="4 3"/>
-<circle cx="151.5" cy="601.0" r="14.4" fill="#ffffff" stroke="#1e293b" stroke-width="1.5"/>
-<circle cx="736.5" cy="601.0" r="30.599999999999998" fill="none" stroke="#64748b" stroke-dasharray="4 3"/>
-<circle cx="736.5" cy="601.0" r="14.4" fill="#ffffff" stroke="#1e293b" stroke-width="1.5"/>
-<line x1="120" y1="632.5" x2="120" y2="704.5" stroke="#94a3b8"/>
-<line x1="768.0" y1="632.5" x2="768.0" y2="704.5" stroke="#94a3b8"/>
-<line x1="120" y1="698.5" x2="768.0" y2="698.5" stroke="#334155" marker-start="url(#a)" marker-end="url(#a)"/>
-<text x="444.0" y="693.5" font-size="13" text-anchor="middle" fill="#0f172a" font-weight="bold">72 mm</text>
-<line x1="151.5" y1="601.0" x2="151.5" y2="668.5" stroke="#94a3b8"/>
-<line x1="736.5" y1="601.0" x2="736.5" y2="668.5" stroke="#94a3b8"/>
-<line x1="151.5" y1="662.5" x2="736.5" y2="662.5" stroke="#334155" marker-start="url(#a)" marker-end="url(#a)"/>
-<text x="444.0" y="657.5" font-size="12" text-anchor="middle" fill="#0f172a" font-weight="bold">65 mm (hole centres)</text>
-<line x1="768.0" y1="128.5" x2="830.0" y2="128.5" stroke="#94a3b8"/>
-<line x1="768.0" y1="632.5" x2="830.0" y2="632.5" stroke="#94a3b8"/>
-<line x1="824.0" y1="128.5" x2="824.0" y2="632.5" stroke="#334155" marker-start="url(#a)" marker-end="url(#a)"/>
-<text x="818.0" y="380.5" font-size="13" text-anchor="middle" fill="#0f172a" font-weight="bold" transform="rotate(-90 818.0 380.5)">56 mm</text>
+<circle cx="853.5" cy="160.0" r="30.599999999999998" fill="none" stroke="#64748b" stroke-dasharray="4 3"/>
+<circle cx="853.5" cy="160.0" r="14.4" fill="#ffffff" stroke="#1e293b" stroke-width="1.5"/>
+<circle cx="151.5" cy="619.0" r="30.599999999999998" fill="none" stroke="#64748b" stroke-dasharray="4 3"/>
+<circle cx="151.5" cy="619.0" r="14.4" fill="#ffffff" stroke="#1e293b" stroke-width="1.5"/>
+<circle cx="853.5" cy="619.0" r="30.599999999999998" fill="none" stroke="#64748b" stroke-dasharray="4 3"/>
+<circle cx="853.5" cy="619.0" r="14.4" fill="#ffffff" stroke="#1e293b" stroke-width="1.5"/>
+<line x1="120" y1="650.5" x2="120" y2="722.5" stroke="#94a3b8"/>
+<line x1="885.0" y1="650.5" x2="885.0" y2="722.5" stroke="#94a3b8"/>
+<line x1="120" y1="716.5" x2="885.0" y2="716.5" stroke="#334155" marker-start="url(#a)" marker-end="url(#a)"/>
+<text x="502.5" y="711.5" font-size="13" text-anchor="middle" fill="#0f172a" font-weight="bold">85 mm</text>
+<line x1="151.5" y1="619.0" x2="151.5" y2="686.5" stroke="#94a3b8"/>
+<line x1="853.5" y1="619.0" x2="853.5" y2="686.5" stroke="#94a3b8"/>
+<line x1="151.5" y1="680.5" x2="853.5" y2="680.5" stroke="#334155" marker-start="url(#a)" marker-end="url(#a)"/>
+<text x="502.5" y="675.5" font-size="12" text-anchor="middle" fill="#0f172a" font-weight="bold">78 mm (hole centres)</text>
+<line x1="885.0" y1="128.5" x2="947.0" y2="128.5" stroke="#94a3b8"/>
+<line x1="885.0" y1="650.5" x2="947.0" y2="650.5" stroke="#94a3b8"/>
+<line x1="941.0" y1="128.5" x2="941.0" y2="650.5" stroke="#334155" marker-start="url(#a)" marker-end="url(#a)"/>
+<text x="935.0" y="389.5" font-size="13" text-anchor="middle" fill="#0f172a" font-weight="bold" transform="rotate(-90 935.0 389.5)">58 mm</text>
 <line x1="151.5" y1="160.0" x2="84.0" y2="160.0" stroke="#94a3b8"/>
-<line x1="151.5" y1="601.0" x2="84.0" y2="601.0" stroke="#94a3b8"/>
-<line x1="90.0" y1="160.0" x2="90.0" y2="601.0" stroke="#334155" marker-start="url(#a)" marker-end="url(#a)"/>
-<text x="84.0" y="380.5" font-size="12" text-anchor="middle" fill="#0f172a" font-weight="bold" transform="rotate(-90 84.0 380.5)">49 mm (hole centres)</text>
+<line x1="151.5" y1="619.0" x2="84.0" y2="619.0" stroke="#94a3b8"/>
+<line x1="90.0" y1="160.0" x2="90.0" y2="619.0" stroke="#334155" marker-start="url(#a)" marker-end="url(#a)"/>
+<text x="84.0" y="389.5" font-size="12" text-anchor="middle" fill="#0f172a" font-weight="bold" transform="rotate(-90 84.0 389.5)">51 mm (hole centres)</text>
 <line x1="525.0" y1="70.0" x2="557.0" y2="70.0" stroke="#94a3b8"/>
 <line x1="525.0" y1="128.5" x2="557.0" y2="128.5" stroke="#94a3b8"/>
 <line x1="551.0" y1="70.0" x2="551.0" y2="128.5" stroke="#334155" marker-start="url(#a)" marker-end="url(#a)"/>
@@ -63,6 +63,6 @@
 <line x1="525.0" y1="70.0" x2="525.0" y2="56.0" stroke="#94a3b8"/>
 <line x1="363.0" y1="62.0" x2="525.0" y2="62.0" stroke="#334155" marker-start="url(#a)" marker-end="url(#a)"/>
 <text x="444.0" y="57.0" font-size="11" text-anchor="middle" fill="#0f172a" font-weight="bold">18 mm</text>
-<text x="120" y="728" font-size="12" fill="#334155">Top view, all dimensions in mm. Holes Ø3.2 mm (M3), centres 3.5 mm from each edge.</text>
-<text x="120" y="746" font-size="12" fill="#334155">Dashed circle Ø6.8 mm: keep-out for screw head or standoff.</text>
+<text x="120" y="746" font-size="12" fill="#334155">Top view, all dimensions in mm. Holes Ø3.2 mm (M3), centres 3.5 mm from each edge.</text>
+<text x="120" y="764" font-size="12" fill="#334155">Dashed circle Ø6.8 mm: keep-out for screw head or standoff.</text>
 </svg>

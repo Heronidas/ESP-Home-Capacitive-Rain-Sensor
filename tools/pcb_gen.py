@@ -99,7 +99,21 @@ def label(t, x, y, size=1.0, rot=0, layer=pcbnew.F_SilkS):
     tx = pcbnew.PCB_TEXT(b); tx.SetText(t); tx.SetPosition(P(x, y)); tx.SetLayer(layer)
     tx.SetTextSize(pcbnew.VECTOR2I(FromMM(size), FromMM(size))); tx.SetTextThickness(FromMM(0.15)); tx.SetTextAngleDegrees(rot); b.Add(tx)
 import labels
-for e in labels.L: label(e[0], e[1], e[2], e[3] if len(e) > 3 else 0.8)
+for e in labels.L: label(e[0], e[1], e[2], e[3] if len(e) > 3 else 0.8, e[4] if len(e) > 4 else 0)
+for t, x, y, sz in labels.BOTTOM:
+    tx = pcbnew.PCB_TEXT(b); tx.SetText(t); tx.SetPosition(P(W - x, y)); tx.SetLayer(pcbnew.B_SilkS); tx.SetMirrored(True)
+    tx.SetTextSize(pcbnew.VECTOR2I(FromMM(sz), FromMM(sz))); tx.SetTextThickness(FromMM(0.15 if sz < 1.5 else 0.25)); b.Add(tx)
+import logo
+lx, ly, lsz = labels.LOGO
+for ext, holes in logo.polygons(lsz, W - lx, ly, mirror=True):
+    ps = pcbnew.SHAPE_POLY_SET(); ps.NewOutline()
+    for x, y in ext: ps.Append(FromMM(OX + x), FromMM(OY + y))
+    for h in holes:
+        hi = ps.NewHole()
+        for x, y in h: ps.Append(FromMM(OX + x), FromMM(OY + y), 0, hi)
+    ps.Fracture(pcbnew.SHAPE_POLY_SET.PM_FAST)
+    s = pcbnew.PCB_SHAPE(b); s.SetShape(pcbnew.SHAPE_T_POLY); s.SetLayer(pcbnew.B_SilkS)
+    s.SetPolyShape(ps); s.SetFilled(True); s.SetWidth(0); b.Add(s)
 
 # ---- GND pours (both layers)
 def gnd_zone(layer):

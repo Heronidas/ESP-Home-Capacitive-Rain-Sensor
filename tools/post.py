@@ -2,6 +2,7 @@ import sys, math
 import pcbnew
 from pcbnew import VECTOR2I, FromMM, ToMM
 src, dst = sys.argv[1], sys.argv[2]
+import os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))); from design import W, H
 b = pcbnew.LoadBoard(src)
 gnd = b.FindNet("GND")
 VIA_D, VIA_DR, CLR = 0.6, 0.3, 0.2
@@ -43,12 +44,8 @@ todo = unconnected()
 print('unconnected GND pads:', sorted(todo))
 placed = []
 n_new = 0
-for fp in b.GetFootprints():
-    for pad in fp.Pads():
-        if pad.GetNetCode() != gnd.GetNetCode(): continue
-        if (fp.GetReference(), pad.GetNumber()) not in todo: continue
-        if pad.GetAttribute() == pcbnew.PAD_ATTRIB_PTH or pad.GetAttribute() == pcbnew.PAD_ATTRIB_NPTH: continue
-        if fp.GetReference().startswith("U1") and pad.GetNumber() == "39": continue  # thermal pad: many vias below
+def pad_via(fp, pad):
+        global n_new, placed
         c = pad.GetPosition()
         # skip if already has a via/track from GND (none routed) -> always add
         done = False
@@ -66,6 +63,14 @@ for fp in b.GetFootprints():
                 b.Add(v); b.Add(t); placed += [v, t]; n_new += 1; done = True; break
             if done: break
         if not done: print("NO GND VIA for", fp.GetReference(), pad.GetNumber())
+        return done
+for fp in b.GetFootprints():
+    for pad in fp.Pads():
+        if pad.GetNetCode() != gnd.GetNetCode(): continue
+        if (fp.GetReference(), pad.GetNumber()) not in todo: continue
+        if pad.GetAttribute() == pcbnew.PAD_ATTRIB_PTH or pad.GetAttribute() == pcbnew.PAD_ATTRIB_NPTH: continue
+        if fp.GetReference().startswith("U1") and pad.GetNumber() == "39": continue  # thermal pad: many vias below
+        pad_via(fp, pad)
 print("gnd vias", n_new)
 
 # ---- stitch every F.Cu pour fragment to the B.Cu plane
@@ -87,13 +92,18 @@ def stitch():
             y = bb.GetY()
             while y < bb.GetBottom():
                 pt = VECTOR2I(x, y)
-                if pt.x < FromMM(100 + 1.0) or pt.x > FromMM(100 + 72 - 1.0) or pt.y < FromMM(80 + 1.0) or pt.y > FromMM(80 + 56 - 1.0):
+                if pt.x < FromMM(100 + 1.0) or pt.x > FromMM(100 + W - 1.0) or pt.y < FromMM(80 + 1.0) or pt.y > FromMM(80 + H - 1.0):
                     y += step; continue
                 ok = all(o.Collide(VECTOR2I(pt.x + int(FromMM(0.3) * math.cos(a)), pt.y + int(FromMM(0.3) * math.sin(a)))) for a in [k * math.pi / 4 for k in range(8)]) and o.Collide(pt)
                 if ok and clear(None, items_other(), [circ(pt, VIA_D)]): best = pt; break
                 y += step
             x += step
-        if best is None: continue
+        if best is None:
+            # fragment too narrow for a via: drop one beside a SMD GND pad inside it
+            pads = [(fp, p) for fp in b.GetFootprints() for p in fp.Pads() if p.GetNetCode() == gnd.GetNetCode()
+                    and p.GetAttribute() == pcbnew.PAD_ATTRIB_SMD and p.IsOnLayer(pcbnew.F_Cu) and o.Collide(p.GetPosition())]
+            if pads and pad_via(*pads[0]): added += 1
+            continue
         v = pcbnew.PCB_VIA(b); v.SetPosition(best); v.SetWidth(FromMM(VIA_D)); v.SetDrill(FromMM(VIA_DR))
         v.SetViaType(pcbnew.VIATYPE_THROUGH); v.SetLayerPair(pcbnew.F_Cu, pcbnew.B_Cu); v.SetNet(gnd); b.Add(v); added += 1
     return added

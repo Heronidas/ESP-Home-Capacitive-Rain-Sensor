@@ -1,11 +1,30 @@
 # Parts
 
-- The carrier board, assembled by JLCPCB ([Ordering](Ordering-the-Board.md)); screw terminals and pin headers are hand-soldered
+- The carrier board, assembled by JLCPCB ([Ordering](Ordering-the-Board.md)); screw terminals and pin headers are hand-soldered (see below)
 - RC-SPC1KA
 - 5 V supply, 1.5 A or more. The heater draws about 0.8 A at 5 V (estimated from 3.4 W plus boost losses, not measured). Tested with the Waveshare Solar Power Manager (D).
 - USB-UART adapter with 3.3 V logic for the first flash; updates then go over Wi-Fi
 - Optional: VEML7700 light sensor (I2C 0x10), HTU21D (GY-21) inside the enclosure
 - Cable to the sensor head (the prototype uses 8-core), IP67 enclosure with desiccant. Keep metal and enclosure walls away from the antenna at the board's top edge; an optional reflector is described in [Board reference](Board-Reference.md#dimensions).
+
+## Parts to solder yourself
+
+JLCPCB does not place the through-hole connectors. You need:
+
+| Ref | Function | Part | Pitch | Hole |
+|---|---|---|---|---|
+| J1 | Power in (5V, GND, BAT) | screw terminal, 3 pins, wire entry from the board edge | 5.08 mm | 1.3 mm |
+| J2 | Sensor (OSC, GND, NTC) | screw terminal, 3 pins, same type | 5.08 mm | 1.3 mm |
+| J3 | Heater (GND, HEAT-, 12V) | screw terminal, 3 pins, same type | 5.08 mm | 1.3 mm |
+| J6 | I2C (3V3, GND, SDA, SCL) | screw terminal, 4 pins, same type | 5.08 mm | 1.3 mm |
+| J4 | Socket for the HTU21D module | female header, 1×4 | 2.54 mm | 1.0 mm |
+| J5 | I2C header (3V3, GND, SCL, SDA) | male header, 1×4 (optional) | 2.54 mm | 1.0 mm |
+| J7 | UART for the first flash | male header, 1×5 | 2.54 mm | 1.0 mm |
+| J8 | Expansion | male header, 1×8 (optional) | 2.54 mm | 1.0 mm |
+
+The terminal footprint follows the Phoenix MKDS 1,5/…-5,08 (horizontal, wire from the side, max. 15.2 mm long for 3 pins and 20.3 mm for 4). Common 5.08 mm terminals such as the KF128 or DG128 fit as well; the blocks sit 1.2 mm apart.
+
+The test points (5V, 3V3, 12V, GND, OSC) need no parts.
 
 ## The sensor
 

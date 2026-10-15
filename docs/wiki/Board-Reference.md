@@ -6,11 +6,11 @@
 
 | | |
 |---|---|
-| Board | 72 × 56 mm, 1.6 mm thick |
+| Board | 85 × 58 mm, 1.6 mm thick, Rev B |
 | Mounting holes | 4 × Ø3.2 mm (M3), centres 3.5 mm from each edge |
-| Hole spacing | 65 mm × 49 mm (centre to centre) |
+| Hole spacing | 78 mm × 51 mm (centre to centre) |
 | Keep-out around each hole | Ø6.8 mm, for screw heads, nuts or standoffs |
-| ESP32 antenna | overhangs the top edge by 6.5 mm, 27 mm from the left edge, 18 mm wide; overall length with antenna 62.5 mm |
+| ESP32 antenna | overhangs the top edge by 6.5 mm, 27 mm from the left edge, 18 mm wide; overall length with antenna 64.5 mm. The UE variant has a u.FL socket instead and no overhang |
 
 For an enclosure or holder: leave about 15 mm above the board for the screw terminals, pin headers and plugged cables, and about 3 mm below for the through-hole solder joints (e.g. 3–5 mm standoffs). The screw terminals sit along the bottom edge, so plan room for the cables there. Keep metal and enclosure walls away from the antenna, except an optional reflector: a metal plate at least 2 cm (ideally 3 cm) behind the antenna, on the side facing away from the access point, strengthens the signal towards it. Measure your own terminals and headers if you use different parts. JLCPCB adds edge rails for assembly and breaks them off afterwards; small residues can remain at the edges, so allow about 0.5 mm clearance around the board.
 
@@ -21,7 +21,7 @@ For an enclosure or holder: leave about 15 mm above the board for the screw term
 - 2 layers; size and holes see [Dimensions](#dimensions).
 - Input: **5 V** (e.g. Waveshare Solar Power Manager (D), USB, any 5 V supply up to 3 A). No solar or battery charging on this board.
 - On board: AP2112K 3.3 V LDO; MT3608 boost to a fixed **12 V** for the heater, switched by GPIO13 through a low-side MOSFET; reverse-polarity PMOS; SN74HC14 relaxation oscillator; NTC divider; optional battery voltage divider; I2C pull-ups; BOOT and RESET buttons; UART header.
-- I2C on Qwiic/STEMMA QT (JST-SH), a 1×4 2.54 mm socket and a 4-pin screw terminal, all in parallel.
+- I2C on a 1×4 2.54 mm socket (J4), a 1×4 pin header beside it (J5, same pin order) and a 4-pin screw terminal, all in parallel.
 
 ## Connectors
 
@@ -31,7 +31,7 @@ For an enclosure or holder: leave about 15 mm above the board for the screw term
 | J2 | Sensor capacitor / NTC | OSC (capacitor node), GND, NTC |
 | J3 | Sensor heater | GND, HEAT- (switched return), +12V |
 | J4 | I2C socket, silkscreen "HTU21D" (any 3V3/GND/SCL/SDA module) | 3V3, GND, SCL, SDA |
-| J5 | Qwiic (silkscreen, top to bottom: 4 SCL, 3 SDA, 2 3V3, 1 GND) | GND, 3V3, SDA, SCL |
+| J5 | I2C pin header, silkscreen "I2C", beside J4 | 3V3, GND, SCL, SDA |
 | J6 | I2C screw terminal | 3V3, GND, SDA, SCL |
 | J7 | UART programming | GND, TXD, RXD, IO0, EN (no power pin; power the board via J1) |
 | J8 | Expansion | 3V3, GND, IO32, IO33, IO26, IO27, IO14, IO4 |

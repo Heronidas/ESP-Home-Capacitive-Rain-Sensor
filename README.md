@@ -86,10 +86,10 @@ This sensor works differently:
 <details>
 <summary><b>Hardware</b></summary>
 
-- [x] ESP32 carrier board, 72 × 56 mm, 2 layers, orderable fully assembled from JLCPCB
+- [x] ESP32 carrier board, 85 × 58 mm, 2 layers, orderable fully assembled from JLCPCB
 - [x] Runs from a single 5 V supply; generates the 12 V for the heater on board
 - [x] Reverse-polarity protection
-- [x] I2C on Qwiic, pin socket and screw terminal; 8-pin expansion header
+- [x] I2C on pin socket, pin header and screw terminal; 8-pin expansion header
 - [x] Supported add-ons: VEML7700 light sensor, HTU21D enclosure climate
 - [ ] BME280, LTR390, anemometer, wind vane, tipping bucket (snippets in the wiki, untested)
 - [x] 3D-printable sensor holder
@@ -105,6 +105,7 @@ This sensor works differently:
 | Firmware | ✅ Running on the Rev A board; detection logic tested on a perfboard prototype in spray, drop and soak tests |
 | Rain detection in real rain | 🟡 Thresholds set from tests, confirmation in real rain pending |
 | Rev A carrier board | 🟡 Built and flashed: boots, Wi-Fi, encrypted OTA, I2C and battery voltage work; test with sensor and heater pending |
+| Rev B carrier board | ⚪ Layout in the repo (5.08 mm terminals, I2C pin header, u.FL variant); not yet ordered |
 | Sensor holder | 🟡 New 45° holder, STLs available; field test pending |
 | Weather add-ons | ⚪ Prepared in the YAML, untested |
 

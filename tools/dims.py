@@ -19,7 +19,7 @@ for r in ["H1","H2","H3","H4"]:
     f=b.FindFootprintByReference(r); p=f.GetPosition(); d=mm(next(iter(f.Pads())).GetDrillSize().x)
     holes.append((round(mm(p.x)-X0,2),round(mm(p.y)-Y0,2),d))
 esp=fab("U1")
-parts={"J1":"POWER IN","J6":"I2C","J3":"HEATER","J2":"SENSOR","J4":"I2C socket","J5":"Qwiic","J7":"UART","J8":"EXPANSION","SW1":"BOOT","SW2":"RESET"}
+parts={"J1":"POWER IN","J6":"I2C","J3":"HEATER","J2":"SENSOR","J4":"I2C socket","J5":"I2C header","J7":"UART","J8":"EXPANSION","SW1":"BOOT","SW2":"RESET"}
 boxes={k:fab(k) for k in parts}
 
 

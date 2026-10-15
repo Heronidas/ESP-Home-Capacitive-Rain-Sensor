@@ -4,7 +4,7 @@ Net names: power nets are global (GND, +5V, +3V3, +12V). Every other net is a lo
 which KiCad exports as "/NAME".
 """
 
-W, H = 72.0, 56.0            # board size in mm
+W, H = 85.0, 58.0            # board size in mm
 ESP_X, ESP_Y = 36.0, 9.2     # ESP32 module origin (antenna overhangs the top edge)
 
 PWR = {"GND", "+5V", "+3V3", "+12V"}
@@ -22,24 +22,24 @@ R0805 = ("Resistor_SMD", "R_0805_2012Metric")
 C0805 = ("Capacitor_SMD", "C_0805_2012Metric")
 
 # ------------------------------------------------------------------ connectors
-TERM3 = ("TerminalBlock_Phoenix", "TerminalBlock_Phoenix_PT-1,5-3-3.5-H_1x03_P3.50mm_Horizontal")
-TERM4 = ("TerminalBlock_Phoenix", "TerminalBlock_Phoenix_PT-1,5-4-3.5-H_1x04_P3.50mm_Horizontal")
+TERM3 = ("TerminalBlock_Phoenix", "TerminalBlock_Phoenix_MKDS-1,5-3-5.08_1x03_P5.08mm_Horizontal")
+TERM4 = ("TerminalBlock_Phoenix", "TerminalBlock_Phoenix_MKDS-1,5-4-5.08_1x04_P5.08mm_Horizontal")
 
 add("J1", ("Connector_Generic", "Conn_01x03"), "5V_IN_GND_BAT", TERM3,
-    {1: "/VIN_RAW", 2: "GND", 3: "/VBAT_IN"}, (4, 47, 0), (40, 40, 0), "C474893", "power")
+    {1: "/VIN_RAW", 2: "GND", 3: "/VBAT_IN"}, (4, 47, 0), (40, 40, 0), "", "power")
 add("J6", ("Connector_Generic", "Conn_01x04"), "I2C_SENSOR", TERM4,
-    {1: "+3V3", 2: "GND", 3: "/SDA", 4: "/SCL"}, (17, 47, 0), (40, 200, 0), "C42400616", "i2c")
+    {1: "+3V3", 2: "GND", 3: "/SDA", 4: "/SCL"}, (17, 47, 0), (40, 200, 0), "", "i2c")
 add("J3", ("Connector_Generic", "Conn_01x03"), "RC-SPC1KA_HEATER", TERM3,
-    {1: "GND", 2: "/HEAT_RET", 3: "+12V"}, (32, 47, 0), (40, 130, 0), "C474893", "sensor")
+    {1: "GND", 2: "/HEAT_RET", 3: "+12V"}, (32, 47, 0), (40, 130, 0), "", "sensor")
 add("J2", ("Connector_Generic", "Conn_01x03"), "RC-SPC1KA_SENSE", TERM3,
-    {1: "/OSC_CAP", 2: "GND", 3: "/NTC_ADC"}, (45, 47, 0), (40, 150, 0), "C474893", "sensor")
+    {1: "/OSC_CAP", 2: "GND", 3: "/NTC_ADC"}, (45, 47, 0), (40, 150, 0), "", "sensor")
 
 add("J4", ("Connector_Generic", "Conn_01x04"), "I2C_BREAKOUT_SOCKET",
     ("Connector_PinSocket_2.54mm", "PinSocket_1x04_P2.54mm_Vertical"),
     {1: "+3V3", 2: "GND", 3: "/SCL", 4: "/SDA"}, (67, 23, 0), (40, 220, 0), "", "i2c")
-add("J5", ("Connector_Generic", "Conn_01x04"), "QWIIC",
-    ("Connector_JST", "JST_SH_SM04B-SRSS-TB_1x04-1MP_P1.00mm_Horizontal"),
-    {1: "GND", 2: "+3V3", 3: "/SDA", 4: "/SCL"}, (66.5, 40, 90), (40, 240, 0), "C160404", "i2c")
+add("J5", ("Connector_Generic", "Conn_01x04"), "I2C_HEADER",
+    ("Connector_PinHeader_2.54mm", "PinHeader_1x04_P2.54mm_Vertical"),
+    {1: "+3V3", 2: "GND", 3: "/SCL", 4: "/SDA"}, (66.5, 40, 0), (40, 240, 0), "", "i2c")
 add("J7", ("Connector_Generic", "Conn_01x05"), "UART_PROG",
     ("Connector_PinHeader_2.54mm", "PinHeader_1x05_P2.54mm_Vertical"),
     {1: "GND", 2: "/UART_TXD", 3: "/UART_RXD", 4: "/IO0", 5: "/EN"}, (54, 3, 0), (40, 60, 0), "", "esp")
