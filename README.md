@@ -26,14 +26,14 @@ RC-SPC1KA sensor element · ESP32 carrier board · ESPHome firmware
 
 ## 💡 Why this sensor
 
-Most affordable rain sensors are contact grids that corrode within a season, or tipping buckets that only report once a measurable amount of water has fallen. Off-the-shelf Zigbee and Wi-Fi rain sensors are a black box: you get *rain: yes/no*, and no way to fix it when it reports dew as rain every morning.
+Affordable rain sensors use contact grids that corrode within a season, or tipping buckets that report once a measurable amount of water has fallen. Off-the-shelf Zigbee and Wi-Fi rain sensors give you *rain: yes/no* and no way to fix it when they report morning dew as rain.
 
-This project takes a different approach:
+This sensor works differently:
 
-- **Sealed capacitive element.** No exposed metal, nothing to corrode. It reacts to a few drops, not to a bucketful.
-- **Heated.** Once the rain stops, the heater dries the surface, so the sensor reports dry within minutes instead of hours. It also clears frost.
-- **Knows what it measures.** Precipitation wets the surface many times faster than dew, fog or humid air; the rate of rise tells them apart.
-- **Fully adjustable.** Hardware and firmware are published in full. Thresholds, heater limits and night mode are runtime settings in Home Assistant or on the device's own web page; no reflash needed.
+- **Sealed capacitive element.** The electrodes sit under a sealed surface, so no metal is exposed to corrode. A few drops register.
+- **Heated.** The heater dries the surface after the rain and clears frost, so the sensor reports dry within minutes.
+- **Rate of rise.** Precipitation wets the surface many times faster than dew, fog or humid air. The firmware uses that rate to tell them apart.
+- **Adjustable.** You get the full hardware and firmware. You change thresholds, heater limits and night mode in Home Assistant or on the device's web page, without reflashing.
 
 ### Typical uses
 
@@ -116,15 +116,15 @@ How it got here: [Milestones](docs/wiki/Milestones.md) · What comes next: [Road
 
 1. **Parts.** The assembled board from JLCPCB ([ordering](docs/wiki/Ordering-the-Board.md)) or a build from modules on perfboard ([Module Build Guide, PDF](docs/module-build-guide.pdf)), plus an RC-SPC1KA ([parts](docs/wiki/Parts.md)).
 2. **Wiring.** Sensor to the SENSOR and HEATER terminals, 5 V to POWER IN ([wiring](docs/wiki/Wiring.md)).
-3. **Flashing.** Once over the UART header with a device config that loads the firmware from this repository; all later updates go over Wi-Fi ([flashing and updates](docs/wiki/Flashing-and-Updates.md)).
+3. **Flashing.** Flash once over the UART header with a device config that loads the firmware from this repository; later updates go over Wi-Fi ([flashing and updates](docs/wiki/Flashing-and-Updates.md)).
 4. **Calibration.** Enter the dry frequency, check the thresholds ([calibration](docs/wiki/Calibration.md)).
-5. **Home Assistant.** The device is discovered automatically. Without Home Assistant, use the [MQTT and web page](docs/wiki/MQTT-and-Web-Page.md) variant.
+5. **Home Assistant.** Home Assistant discovers the device. Without Home Assistant, use the [MQTT and web page](docs/wiki/MQTT-and-Web-Page.md) variant.
 
 ---
 
 ## 📚 Documentation
 
-The **[wiki](docs/wiki/Home.md)** covers everything in detail:
+The **[wiki](docs/wiki/Home.md)** has the details:
 
 | | |
 |---|---|
@@ -153,7 +153,7 @@ The **[wiki](docs/wiki/Home.md)** covers everything in detail:
 
 ## ☕ Support
 
-If this project saved you time, you can support it on Ko-fi. Not required, always appreciated.
+If this project saved you time, you can support it on Ko-fi.
 
 <a href="https://ko-fi.com/heronidas"><img src="https://ko-fi.com/img/githubbutton_sm.svg" alt="Support on Ko-fi"></a>
 
@@ -161,15 +161,15 @@ If this project saved you time, you can support it on Ko-fi. Not required, alway
 
 ## 📄 License
 
-The firmware is open source under the GPL. The hardware is free for private and non-commercial use; commercial use of the hardware requires written permission, and commercial licenses are available on request.
+The firmware is open source under the GPL. You may use the hardware for private and non-commercial purposes; commercial use needs my written permission, and I offer commercial licenses on request.
 
 | Part | License |
 |---|---|
 | Hardware, fabrication files, sensor holder, documentation | [CC BY-NC-SA 4.0](LICENSES/CC-BY-NC-SA-4.0.txt) |
 | Firmware and tools | [GPL-3.0-or-later](LICENSES/GPL-3.0.txt) |
 
-If you build on this project, a mention with a link back to this repository is appreciated. This is a friendly request, not an extra license condition.
+If you build on this project, I'd appreciate a mention with a link back to this repository. The license does not require it.
 
-Details, including passing on spare boards at cost, in [`LICENSE.md`](LICENSE.md).
+[`LICENSE.md`](LICENSE.md) has the details, including passing on spare boards at cost.
 
 <sub>RC-SPC1KA is a product of Radiocontrolli S.r.l. This project is independent and not affiliated with or endorsed by Radiocontrolli.</sub>
