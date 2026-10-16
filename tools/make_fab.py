@@ -40,10 +40,10 @@ def write(sfx, rows, cpl):
         w = csv.writer(f); w.writerow(["Designator", "Mid X", "Mid Y", "Layer", "Rotation"])
         for r in sorted(cpl): w.writerow([r[0], f"{r[1]}mm", f"{r[2]}mm", r[3], r[4]])
 write("", rows, cpl)
-# UE variant (u.FL antenna): same Gerbers; module body 6.3 mm shorter on the antenna side, so its centre sits 3.15 mm lower
+# UE variant (u.FL antenna): same Gerbers
 ue_rows = {(("ESP32-WROOM-32UE-N4", k[1], "C701344") if r == ["U1"] else k): r for k, r in rows.items()}
 # JLCPCB's UE model sits 90° turned against the 32E model
-ue_cpl = [(r[0], r[1], round(r[2] - 3.15, 4), r[3], (r[4] + 90) % 360) if r[0] == "U1" else r for r in cpl]
+ue_cpl = [(r[0], r[1], r[2], r[3], (r[4] + 90) % 360) if r[0] == "U1" else r for r in cpl]
 write("_ue", ue_rows, ue_cpl)
 shutil.make_archive(f"{out}/regensensor_gerbers", "zip", f"{out}/gerbers")
 print(os.listdir(f"{out}/gerbers")); print(open(f"{out}/bom_jlcpcb.csv").read())
