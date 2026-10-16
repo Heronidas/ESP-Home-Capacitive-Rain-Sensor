@@ -12,7 +12,7 @@ subprocess.run(["kicad-cli","pcb","export","gerbers","--layers",layers,"--no-x2"
 subprocess.run(["kicad-cli","pcb","export","drill","--format","excellon","--drill-origin","plot","--excellon-separate-th","--generate-map","--map-format","gerberx2","-o",f"{out}/gerbers/",pcb],check=True)
 b = pcbnew.LoadBoard(pcb)
 # Most specific pattern first; the loop below stops at the first match.
-ROT = [(r"^SOT-23-[56]", 90), (r"^SOT-23$", 180), (r"^SOIC-", 270), (r"^ESP32", 270)]
+ROT = [(r"^SOT-23-[56]", 270), (r"^SOT-23$", 180), (r"^SOIC-", 270), (r"^ESP32", 270)]
 NO_ASSY = {"J1","J2","J3","J6","J4","J5","J7","J8"}  # through-hole parts: hand-solder
 rows = {}; cpl = []
 for fp in b.GetFootprints():
