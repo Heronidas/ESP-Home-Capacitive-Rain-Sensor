@@ -30,7 +30,11 @@ for fp in b.GetFootprints():
 def write(sfx, rows, cpl):
     with open(f"{out}/bom_jlcpcb{sfx}.csv", "w", newline="") as f:
         w = csv.writer(f); w.writerow(["Comment", "Designator", "Footprint", "LCSC Part #"])
-        for (v, fpn, l), refs in sorted(rows.items(), key=lambda kv: kv[1][0]):
+        merged = {}  # JLCPCB rejects one LCSC part on two BOM lines (BOOT/RESET)
+        for (v, fpn, l), refs in rows.items():
+            m = merged.setdefault((fpn, l), [[], []]); m[0].append(v); m[1] += refs
+        for (fpn, l), (vs, refs) in sorted(merged.items(), key=lambda kv: kv[1][1][0]):
+            v = "/".join(vs)
             w.writerow([v, ",".join(sorted(refs, key=lambda r: (re.sub(r"\d", "", r), int(re.sub(r"\D", "", r) or 0)))), fpn, l])
     with open(f"{out}/cpl_jlcpcb{sfx}.csv", "w", newline="") as f:
         w = csv.writer(f); w.writerow(["Designator", "Mid X", "Mid Y", "Layer", "Rotation"])
