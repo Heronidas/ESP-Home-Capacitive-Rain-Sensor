@@ -96,7 +96,7 @@ At −1 °C the heater melted frost. The water ran to the edge of the flat holde
 In a drop test a drop stayed at 20°, slid from about 30° and at 45° smaller drops slid too. A steeper angle adds little and loses catch area for drizzle. Turning the sensor onto a corner made no difference.
 
 ### 13–14 October: new sensor holder
-The sensor sits proud on a pedestal a little smaller than the element, so water drips off all four edges. Gutters and side shields run beside it without touching it, and the cable slot sits at the lower edge. The holder is white ASA-GF, primed and painted. Sikaflex bonds the sensor and seals the whole back instead of potting; it stays elastic while the plastic expands with heat.
+The sensor sits proud on a pedestal a little smaller than the element, so water drips off all four edges. Gutters and side shields run beside it without touching it, and the cable slot sits at the lower edge. The holder is white ASA-GF, primed and painted. An elastic MS-polymer sealant bonds the sensor and seals the whole back instead of potting; it stays elastic while the plastic expands with heat.
 
 ### 15 October: Rev A in service
 I flashed the board once over UART; the API key now encrypts OTA updates. Home Assistant moved the existing device onto the new board ("migrate" in the name-conflict dialog) and kept entity IDs, dashboard and history. Battery voltage reads correctly. An aluminium plate 2 cm behind the antenna reflects the WiFi signal towards the access point.
