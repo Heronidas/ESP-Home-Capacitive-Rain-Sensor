@@ -30,7 +30,7 @@ The test points (5V, 3V3, 12V, GND, OSC) need no parts.
 
 The **RC-SPC1KA** from Radiocontrolli is a sealed capacitive rain sensor on an alumina substrate. Besides the sensing capacitor it carries a heater (about 42 Ω, roughly 3.4 W at 12 V) and an NTC (1 kΩ at 25 °C) for the surface temperature.
 
-Dry, it measures about 100 pF. On the prototype a soaked surface reads about 900–1250 pF (RC-SPC1K datasheet: more than 550 pF at full water cover).
+Dry, it measures about 100 pF. On the carrier board a fully wet surface reads about 3,100 pF (RC-SPC1K datasheet: more than 550 pF at full water cover).
 
 It is sold by electronics distributors, for example [Novaut](https://www.novaut.com/en/620521-rc-spc1ka-radiocontrolli.html) (about 13 EUR incl. VAT, EU shipping), [TME](https://www.tme.com/us/en-us/details/rc-spc1ka/humidity-sensors/radiocontrolli/) and [DigiKey](https://www.digikey.com/en/products/detail/radiocontrolli/RC-SPC1KA/13688193). Prices and stock as of 2026-09; this project is not affiliated with any of them, nor with Radiocontrolli.
 

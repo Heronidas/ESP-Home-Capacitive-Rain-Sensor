@@ -33,9 +33,9 @@ substitutions:
 
   # Capacitance: C = Trockenfrequenz * 100 / f (dry frequency = 100 pF).
   # The runtime number "Trockenfrequenz" overrides this start value.
-  # 13549 Hz is a placeholder from the vendor example, measure your own.
-  c_freq_referenz_start: "13549.0"
-  c_steht: "5000.0"      # pF reported while the oscillator stalls
+  # Typical for the carrier board with the sensor cable; measure your own.
+  c_freq_referenz_start: "35000.0"
+  c_steht: "10000.0"      # pF reported while the oscillator stalls
 
   # Precipitation: rise thresholds are runtime numbers ("Niesel Erkennung",
   # "Regen Erkennung"; dew and fog rise a few pF/min). Below rate_ruhig the
@@ -51,6 +51,12 @@ substitutions:
   # After a rain end the heater dries the surface. Still at the rain level
   # after this many seconds of drying = still raining, rain is set again.
   regen_heiztest: "180"  # s
+
+  # The running heater disturbs the oscillator: samples are dropped while it
+  # runs and for mess_sperre_s after; it then stays off at least mess_pause_s
+  # so a clean reading comes in.
+  mess_sperre_s: "12"
+  mess_pause_s: "25"
 
   # The heater runs down to this share of the heating threshold: fewer, longer pulses.
   hyst_heizung: "0.85"
@@ -214,6 +220,11 @@ globals:
     restore_value: true
     initial_value: '-1'
 
+  # millis() of the last second with the heater on (sample hold).
+  - id: g_aus_ms
+    type: uint32_t
+    initial_value: '0'
+
   # Unix time of the last loop run with the heater on (drizzle pause).
   - id: g_heiz_ts
     type: uint32_t
@@ -249,10 +260,8 @@ globals:
     initial_value: 'false'
 
 
-# Runtime thresholds; initial_value applies only on the first boot.
-# Start values from measurements: dry 100, dew ~105-120 (cloudy night) to
-# ~250 (clear night), spray mist ~270, three drops ~290, heavy spray ~600,
-# soaked cloth 870-1240 pF.
+# Runtime thresholds; initial_value applies only on the first boot. Tune them
+# to your setup.
 number:
   # Dry frequency of your setup = 100 pF. Read "Frequenz" with a completely
   # dry surface and enter the mean here. "Kapazität" stays NAN without it.
@@ -261,9 +270,13 @@ number:
     id: freq_referenz
     unit_of_measurement: "Hz"
     min_value: 1000
-    max_value: 30000
+    max_value: 100000
     step: 1
     initial_value: ${c_freq_referenz_start}
+    # A new reference shifts the capacitance in one step: restart the rate.
+    # set_action runs only on a user change, not on the restore at each boot.
+    set_action:
+      - lambda: 'id(c_vorher) = NAN;'
     <<: &number_cfg
       restore_value: true
       optimistic: true
@@ -283,7 +296,7 @@ number:
     <<: *number_cfg
 
   # From here the automation heats ("Feucht" turns on), unless it rains or drizzles.
-  # Above the dew level (~250 pF): heating dew at night only wastes energy.
+  # Keep it above the dew level: heating dew at night only wastes energy.
   - platform: template
     name: "Feuchtigkeitsschwelle"
     id: schwelle_feucht
@@ -530,13 +543,16 @@ sensor:
     accuracy_decimals: 1
     update_interval: 2s
     use_pcnt: true
+    internal_filter: 2us   # default 13 us cuts off near 38 kHz
     filters:
       - multiply: 0.0166667    # pulses/min -> Hz
-      # I2C crosstalk corrupts about 1 of 4 windows; median over 5.
+      # Median over 5 windows against single bad windows.
       - median:
           window_size: 5
     on_value:
       - lambda: |-
+          // Heater on or just off: keep the last reading.
+          if (id(heizung).state || (id(g_aus_ms) != 0 && millis() - id(g_aus_ms) < ${mess_sperre_s} * 1000UL)) return;
           // Stalled or sputtering oscillator: water at the pads, not a reading.
           // No rate, so the latches cannot fire on it.
           float c_pf;
@@ -753,6 +769,7 @@ interval:
           float sr = id(schwelle_regen).state;
           auto  jz = id(uhr).now();
           if (heiz_an && jz.is_valid()) id(g_heiz_ts) = jz.timestamp;
+          if (heiz_an) id(g_aus_ms) = millis();
           uint32_t h = id(g_heiz_ts);
           bool frisch = heiz_an || (h != 0 && jz.is_valid() && jz.timestamp - h < ${niesel_sperre_s});
           if (!isnan(t) && jz.is_valid()) {
@@ -910,8 +927,9 @@ interval:
 
           // 6) Switch on change. Temperature hysteresis: after the cut-off,
           // switch on again only at or below temp_ein; switching off is
-          // never delayed.
-          if (soll && !heiz_an && t > ${temp_ein}) return;
+          // never delayed. Off at least mess_pause_s for a clean reading.
+          if (soll && !heiz_an && (t > ${temp_ein} ||
+              (id(g_aus_ms) != 0 && millis() - id(g_aus_ms) < ${mess_pause_s} * 1000UL))) return;
           if (soll != heiz_an) {
             if (soll) id(heizung).turn_on();
             else      id(heizung).turn_off();

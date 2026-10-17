@@ -1,7 +1,7 @@
 # Roadmap
 
-- **Rev A board:** test with sensor and heater in the new holder; results go into [Known limitations](Known-Limitations.md).
-- **Real rain:** confirm the drizzle and rain detection (15–18 / 150 pF/min), the rain-end timer and the heater test in real rain.
+- **Rev A board:** run it outdoors in the new holder. Find out whether the heater disturbs the oscillator through the board, the cable or the sensor itself.
+- **Real rain:** set the drizzle and rain thresholds from real drizzle and rain, and confirm the rain-end timer and the heater test.
 - **Fog:** report fog as its own state; in fog the plate wets again within minutes after a heat pulse while the surface temperature stays steady.
 - **Rain duration:** rain minutes per day from the firmware, so MQTT setups get it too (Home Assistant can already count it with a helper).
 - **Frost and snow:** detect frost (surface below 0 °C and rising capacitance) and thaw on purpose; snow needs a winter of testing.

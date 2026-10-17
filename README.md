@@ -102,9 +102,9 @@ This sensor works differently:
 
 | Part | Status |
 |---|---|
-| Firmware | ✅ Running on the Rev A board; detection logic tested on a perfboard prototype in spray, drop and soak tests |
+| Firmware | ✅ Running on the Rev A board; detection logic tested in spray, drop and soak tests |
 | Rain detection in real rain | 🟡 Thresholds set from tests, confirmation in real rain pending |
-| Rev A carrier board | 🟡 Built and flashed: boots, Wi-Fi, encrypted OTA, I2C and battery voltage work; test with sensor and heater pending |
+| Rev A carrier board | 🟡 Sensor, heater, VEML7700 and battery voltage tested on the bench; outdoor test pending |
 | Rev B carrier board | ⚪ Layout in the repo (5.08 mm terminals, I2C pin header, u.FL variant); not yet ordered |
 | Sensor holder | 🟡 New 45° holder, STLs available; field test pending |
 | Weather add-ons | ⚪ Prepared in the YAML, untested |

@@ -101,5 +101,10 @@ The sensor sits proud on a pedestal a little smaller than the element, so water 
 ### 15 October: Rev A in service
 I flashed the board once over UART; the API key now encrypts OTA updates. Home Assistant moved the existing device onto the new board ("migrate" in the name-conflict dialog) and kept entity IDs, dashboard and history. Battery voltage reads correctly. An aluminium plate 2 cm behind the antenna reflects the WiFi signal towards the access point.
 
+### 17 October: bench test on Rev A
+With the same cable as on the prototype, the dry frequency rose from 14.6 to 35 kHz. The board carries less stray capacitance at the oscillator than the perfboard did. A wet surface reads 31 times the dry value instead of 10 times, and a single drop doubles the reading. The heater warmed the plate from 23 to 45 °C in 30 seconds. While it runs, the oscillator stops. The firmware skips readings during heating and pauses the heater for a clean one.
+
+**Learned:** stray capacitance in the wiring dilutes the signal more than the cable does.
+
 ### Next
 See [Roadmap](Roadmap.md).
