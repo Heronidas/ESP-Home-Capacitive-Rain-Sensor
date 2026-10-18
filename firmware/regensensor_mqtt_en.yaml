@@ -57,6 +57,8 @@ substitutions:
   # so a clean reading comes in.
   meas_hold_s: "12"
   meas_pause_s: "25"
+  # Longest heating pulse, for when the plate does not reach temp_off.
+  heat_pulse_max_s: "60"
 
   # The heater runs down to this share of the heating threshold: fewer, longer pulses.
   hyst_heater: "0.85"
@@ -97,8 +99,6 @@ mqtt:
   broker: !secret mqtt_broker
   username: !secret mqtt_username
   password: !secret mqtt_password
-  discovery: true
-  discovery_retain: true
   birth_message:
   will_message:
   shutdown_message:
@@ -106,7 +106,6 @@ mqtt:
 
 # Local web page: states, settings and OTA upload; works without internet.
 web_server:
-  port: 80
   version: 3
   local: true
 
@@ -224,6 +223,10 @@ globals:
   - id: g_off_ms
     type: uint32_t
     initial_value: '0'
+  # millis() at heater switch-on (pulse limit).
+  - id: g_pulse_ms
+    type: uint32_t
+    initial_value: '0'
 
   # Unix time of the last loop run with the heater on (drizzle pause).
   - id: g_heater_ts
@@ -292,7 +295,7 @@ number:
     min_value: 1
     max_value: 5
     step: 0.1
-    initial_value: 1.6
+    initial_value: 1.0
     <<: *number_cfg
 
   # From here the automation heats ("Humid" turns on), unless it rains or drizzles.
@@ -426,20 +429,18 @@ sensor:
       id: brightness
       accuracy_decimals: 1
       filters:
-        - lambda: |-
-            return isnan(x) ? x : x * id(glass_factor).state;
+        - lambda: 'return x * id(glass_factor).state;'
 
   # Rough lux -> W/m2 for daylight; not used by the classification.
-  - platform: template
+  - platform: copy
+    source_id: brightness
     name: "Solar Irradiance"
     unit_of_measurement: "W/m²"
     device_class: irradiance
     state_class: measurement
     accuracy_decimals: 0
-    update_interval: 15s
-    lambda: |-
-      if (isnan(id(brightness).state)) return NAN;
-      return id(brightness).state * 0.01;
+    filters:
+      - multiply: 0.01
 
   # HTU21D inside the enclosure: battery climate (no charging below 0 °C)
   # and desiccant check.
@@ -542,7 +543,6 @@ sensor:
     state_class: measurement
     accuracy_decimals: 1
     update_interval: 2s
-    use_pcnt: true
     internal_filter: 2us   # default 13 us cuts off near 38 kHz
     filters:
       - multiply: 0.0166667    # pulses/min -> Hz
@@ -603,7 +603,6 @@ sensor:
     name: "Wetness"
     icon: mdi:water-percent
     unit_of_measurement: "%"
-    device_class: ""
     state_class: measurement
     accuracy_decimals: 0
     filters:
@@ -700,8 +699,10 @@ switch:
     name: "Heater"
     icon: mdi:radiator
     restore_mode: ALWAYS_OFF
+    on_turn_on:
+      - lambda: 'id(g_pulse_ms) = millis();'
 
-  # Veto against night mode (keeps the device reachable, e.g. for OTA).
+  # Allows night mode; off keeps the device awake and reachable (e.g. for OTA).
   # Off by default: enable only when the supply does not cut out at low load.
   - platform: template
     name: "Night Mode"
@@ -720,9 +721,11 @@ switch:
     icon: mdi:auto-mode
     optimistic: true
     restore_mode: RESTORE_DEFAULT_ON
-    # Turning it on clears a running lockout.
+    # Turning it on clears a running lockout. Not on the restore at boot, or
+    # every night-mode wake would clear the heater account.
     on_turn_on:
       - lambda: |-
+          if (millis() < 10000) return;
           id(g_heat_sec) = 0.0f;
           id(g_lockout_sec) = 0;
 
@@ -879,12 +882,16 @@ interval:
           // resistance, i.e. a wiring fault.
           if (isnan(t) || t >= ${temp_off}) {
             if (heater_on) id(heater).turn_off();
+            if (isnan(t)) id(g_rain_ended) = false;   // no heater test possible
             return;
           }
 
           // 2) Manual mode: no further intervention (also skips the heating
           // limit; the temperature cut-off above still applies).
-          if (!id(auto_mode).state) return;
+          if (!id(auto_mode).state) {
+            id(g_rain_ended) = false;   // no heater test in manual mode
+            return;
+          }
 
           // 3) Heat when wet, never during precipitation (the sensor has to
           // see it, and the heater cannot keep up with rain). Dew stays below
@@ -908,6 +915,7 @@ interval:
           if (id(g_lockout_sec) > 0) {
             if (heater_on) id(heater).turn_off();
             id(g_drying_sec) = 0.0f;
+            id(g_rain_ended) = false;   // no heater test during the lockout
             return;
           }
 
@@ -928,6 +936,7 @@ interval:
           // 6) Switch on change. Temperature hysteresis: after the cut-off,
           // switch on again only at or below temp_on; switching off is
           // never delayed. Off at least meas_pause_s for a clean reading.
+          if (heater_on && millis() - id(g_pulse_ms) >= ${heat_pulse_max_s} * 1000UL) desired = false;
           if (desired && !heater_on && (t > ${temp_on} ||
               (id(g_off_ms) != 0 && millis() - id(g_off_ms) < ${meas_pause_s} * 1000UL))) return;
           if (desired != heater_on) {

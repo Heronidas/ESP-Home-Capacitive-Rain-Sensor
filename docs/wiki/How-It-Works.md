@@ -6,7 +6,7 @@ The sensing capacitor sets the frequency of a relaxation oscillator (SN74HC14 wi
 
 If water reaches bare metal (an unsealed solder joint or the cable entry), the oscillator stops or sputters. Below 1/100 of the dry frequency the firmware reports "Oszillator steht", sets the capacitance to 10000 pF, holds the weather state and the rain latches, and heats the plate for up to 10 minutes to dry the leak. If it still stalls or sputters after that, the heater waits until a reading on the cooled plate is below the heating threshold (a hot plate dries the leak only for a moment).
 
-The running heater disturbs the oscillator. The firmware ignores the frequency while the heater runs and for 12 s after, and keeps the heater off for at least 25 s between pulses, so each pause yields a clean reading.
+The running heater disturbs the oscillator. The firmware ignores the frequency while the heater runs and for 12 s after, and keeps the heater off for at least 25 s between pulses, so each pause yields a clean reading. A pulse lasts at most 60 s, so the sensor gets a reading even when the plate does not reach 45 °C.
 
 ## Rain or not
 
@@ -25,7 +25,7 @@ A rise of *Drizzle Detection* (default 18 pF/min) or more latches **drizzle**, e
 
 ## Heater
 
-The heater dries the film left after rain, heavy fog and frost. Its threshold (default 300 pF) sits above the level dew settles at: heated dew comes back within minutes, so heating it only costs energy and blocks drizzle detection. Once on, it heats in pulses until the level falls to 85 % of the heating threshold. It stays off while drizzle or rain is latched, so the sensor can see the precipitation. After a rain end it dries the surface down to below the heating threshold. If the level is still at rain level after 3 minutes of drying, it is still raining and rain is set again. Rain remains reported until the surface has dried below the rain level, so steady rain never reports a false end.
+The heater dries the film left after rain, heavy fog and frost. Its threshold (default 300 pF) sits above the level dew settles at: heated dew comes back within minutes, so heating it only costs energy and blocks drizzle detection. Once on, it heats in pulses until the level falls to 85 % of the heating threshold. It stays off while drizzle or rain is latched, so the sensor can see the precipitation. After a rain end it dries the surface down to below the heating threshold. If the level is still at rain level after 3 minutes of drying, it is still raining and rain is set again. Rain remains reported until the surface has dried below the rain level, so steady rain never reports a false end. Without this test (manual mode, heating pause, NTC fault) rain ends after *Rain End After*.
 
 Safety: off at 45 °C surface temperature, back on below 40 °C and after 25 s at the earliest, checked every second (the surface heats at about 0.7 K/s, from 23 to 45 °C in 30 s). Heating time is budgeted (default 15 min, then a 2 h pause). Implausible NTC readings switch it off, and it always starts off after a reset.
 
