@@ -266,13 +266,13 @@ number:
       entity_category: config
 
   # VEML7700 sits behind a cover; this compensates for its attenuation.
-  # No precise measurement exists, so tune against a known outdoor lux value.
+  # Factor = lux without cover / lux behind it, read right after each other.
   - platform: template
     name: "Glasfaktor"
     id: glasfaktor
     unit_of_measurement: "x"
     min_value: 1
-    max_value: 5
+    max_value: 10
     step: 0.1
     initial_value: 1.0
     <<: *number_cfg

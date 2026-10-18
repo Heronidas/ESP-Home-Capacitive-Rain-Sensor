@@ -33,7 +33,7 @@ The sensor face sits at 45°. At that angle small drops slide off; a steeper fac
 - Degrease the bonding surfaces (isopropanol). These sealants cure from the outside in at about 3 mm per day; a 1 mm layer needs one to two days at room temperature before the holder goes outside.
 - Fit the VEML7700 in the head, then glue the bottom lid shut.
 - Measure the dry frequency again once the sealant has cured (see [Calibration](Calibration.md)).
-- If the VEML7700 sits behind a cover or paint, adjust *Glass Factor* (default 1.0) on an evenly overcast day; no reflash needed.
+- If the VEML7700 sits behind a cover or paint, set *Glass Factor* (default 1.0, up to 10) to lux without the cover divided by lux behind it, read right after each other in steady light; no reflash needed.
 - Lead the cable away with a drip loop and add strain relief. Use an outdoor-rated cable (plain LiYY is not UV resistant).
 - Use stainless screws for wall mounting.
 
