@@ -1,136 +1,132 @@
-"""Single source of truth for the rain sensor carrier board (schematic + PCB + BOM).
+"""Single source of truth for the rain sensor carrier board rev B (schematic + PCB + BOM).
 
-Net names: power nets are global (GND, +5V, +3V3, +12V). Every other net is a local label,
+Rev B follows the tested prototype: ESP32 D1 mini on headers, external XL6009 boost module on
+pin headers, heater switched low side by an N-MOSFET on the module input. The heater return
+(GNDPWR) has its own copper to the GND terminal of J1; it meets the logic GND only there (NT1).
+
+Net names: power nets are global (GND, GNDPWR, +5V, +3V3). Every other net is a local label,
 which KiCad exports as "/NAME".
 """
+import os, sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from lib_gen import minikit_pins
 
-W, H = 85.0, 58.0            # board size in mm
-ESP_X, ESP_Y = 36.0, 9.2     # ESP32 module origin (antenna overhangs the top edge)
+W, H = 100.0, 70.0           # board size in mm
+TERM_Y = 61.0                # terminal row (wire entry towards the bottom edge)
+D1_X, D1_Y = 77.0, 19.43     # centre of the D1 mini pin field (antenna end up, USB end down)
+XL_X, XL_Y = 8.0, 28.0       # XL6009 IN+ pad; IN- 18 mm below, OUT+/OUT- 41 mm to the right
+HOLE = 3.5                   # mounting holes, centre distance from each edge
 
-PWR = {"GND", "+5V", "+3V3", "+12V"}
+PWR = {"GND", "GNDPWR", "+5V", "+3V3"}
 
 # fields: ref -> dict(sym=(lib,name), value, fp=(lib,name), lcsc, pins={pin: net or None}, pcb=(x,y,rot), sch=(x,y,rot), block)
 C = {}
 
 
-def add(ref, sym, value, fp, pins, pcb, sch, lcsc="", block="", dnp_note="", **kw):
+def add(ref, sym, value, fp, pins, pcb, sch=(0, 0, 0), lcsc="", block="", dnp_note="", **kw):
     C[ref] = dict(ref=ref, sym=sym, value=value, fp=fp, pins=pins, pcb=pcb, sch=sch, lcsc=lcsc,
                   block=block, note=dnp_note, **kw)
 
 
 R0805 = ("Resistor_SMD", "R_0805_2012Metric")
+R0603 = ("Resistor_SMD", "R_0603_1608Metric")
 C0805 = ("Capacitor_SMD", "C_0805_2012Metric")
+TERM = {n: ("TerminalBlock_Phoenix", f"TerminalBlock_Phoenix_MKDS-1,5-{n}-5.08_1x0{n}_P5.08mm_Horizontal") for n in (2, 3, 4)}
+CONN = {n: ("Connector_Generic", f"Conn_01x0{n}") for n in (2, 3, 4, 8)}
+R100K = ("100k", R0603, "C25803")
 
-# ------------------------------------------------------------------ connectors
-TERM3 = ("TerminalBlock_Phoenix", "TerminalBlock_Phoenix_MKDS-1,5-3-5.08_1x03_P5.08mm_Horizontal")
-TERM4 = ("TerminalBlock_Phoenix", "TerminalBlock_Phoenix_MKDS-1,5-4-5.08_1x04_P5.08mm_Horizontal")
+# ------------------------------------------------------------------ terminals (bottom row)
+add("J1", CONN[3], "5V_IN_GND_BAT", TERM[3], {1: "+5V", 2: "GNDPWR", 3: "/VBAT_IN"}, (10.24, TERM_Y, 0), block="power")
+add("J6", CONN[4], "I2C_SENSOR", TERM[4], {1: "+3V3", 2: "GND", 3: "/SDA", 4: "/SCL"}, (70.88, TERM_Y, 0), block="i2c")
+add("J3", CONN[2], "RC-SPC1KA_HEATER", TERM[2], {1: "/HEAT_P", 2: "/HEAT_N"}, (27.48, TERM_Y, 0), block="heater")
+add("J2", CONN[3], "RC-SPC1KA_SENSE", TERM[3], {1: "/OSC_CAP", 2: "GND", 3: "/NTC_ADC"}, (50.64, TERM_Y, 0), block="sensor")
 
-add("J1", ("Connector_Generic", "Conn_01x03"), "5V_IN_GND_BAT", TERM3,
-    {1: "/VIN_RAW", 2: "GND", 3: "/VBAT_IN"}, (4, 47, 0), (40, 40, 0), "", "power")
-add("J6", ("Connector_Generic", "Conn_01x04"), "I2C_SENSOR", TERM4,
-    {1: "+3V3", 2: "GND", 3: "/SDA", 4: "/SCL"}, (17, 47, 0), (40, 200, 0), "", "i2c")
-add("J3", ("Connector_Generic", "Conn_01x03"), "RC-SPC1KA_HEATER", TERM3,
-    {1: "GND", 2: "/HEAT_RET", 3: "+12V"}, (32, 47, 0), (40, 130, 0), "", "sensor")
-add("J2", ("Connector_Generic", "Conn_01x03"), "RC-SPC1KA_SENSE", TERM3,
-    {1: "/OSC_CAP", 2: "GND", 3: "/NTC_ADC"}, (45, 47, 0), (40, 150, 0), "", "sensor")
-
-add("J4", ("Connector_Generic", "Conn_01x04"), "I2C_BREAKOUT_SOCKET",
-    ("Connector_PinSocket_2.54mm", "PinSocket_1x04_P2.54mm_Vertical"),
-    {1: "+3V3", 2: "GND", 3: "/SCL", 4: "/SDA"}, (67, 23, 0), (40, 220, 0), "", "i2c")
-add("J5", ("Connector_Generic", "Conn_01x04"), "I2C_HEADER",
-    ("Connector_PinHeader_2.54mm", "PinHeader_1x04_P2.54mm_Vertical"),
-    {1: "+3V3", 2: "GND", 3: "/SCL", 4: "/SDA"}, (66.5, 40, 0), (40, 240, 0), "", "i2c")
-add("J7", ("Connector_Generic", "Conn_01x05"), "UART_PROG",
-    ("Connector_PinHeader_2.54mm", "PinHeader_1x05_P2.54mm_Vertical"),
-    {1: "GND", 2: "/UART_TXD", 3: "/UART_RXD", 4: "/IO0", 5: "/EN"}, (54, 3, 0), (40, 60, 0), "", "esp")
+# ------------------------------------------------------------------ headers (top row)
 add("J8", ("Connector_Generic", "Conn_01x08"), "EXPANSION",
     ("Connector_PinHeader_2.54mm", "PinHeader_1x08_P2.54mm_Vertical"),
     {1: "+3V3", 2: "GND", 3: "/IO32", 4: "/IO33", 5: "/IO26", 6: "/IO27", 7: "/IO14", 8: "/IO4"},
-    (3.5, 21.5, 90), (40, 80, 0), "", "esp")
+    (9.0, 5.0, 90), block="esp")
+add("J5", CONN[4], "I2C_HEADER", ("Connector_PinHeader_2.54mm", "PinHeader_1x04_P2.54mm_Vertical"),
+    {1: "+3V3", 2: "GND", 3: "/SCL", 4: "/SDA"}, (33.0, 5.0, 90), block="i2c")
+add("J4", CONN[4], "I2C_SOCKET", ("Connector_PinSocket_2.54mm", "PinSocket_1x04_P2.54mm_Vertical"),
+    {1: "+3V3", 2: "GND", 3: "/SCL", 4: "/SDA"}, (33.0, 9.0, 90), block="i2c")
 
-# ------------------------------------------------------------------ ESP32 module
-esp_pins = {p: None for p in range(1, 40)}
-esp_pins.update({1: "GND", 15: "GND", 38: "GND", 39: "GND", 2: "+3V3", 3: "/EN", 6: "/NTC_ADC",
-                 7: "/VBAT_ADC", 8: "/IO32", 9: "/IO33", 10: "/OSC_OUT", 11: "/IO26", 12: "/IO27",
-                 13: "/IO14", 16: "/HEAT_CTRL", 25: "/IO0", 26: "/IO4", 33: "/SDA", 34: "/UART_RXD",
-                 35: "/UART_TXD", 36: "/SCL"})
-add("U1", ("RF_Module", "ESP32-WROOM-32"), "ESP32-WROOM-32E-N4", ("RF_Module", "ESP32-WROOM-32"),
-    esp_pins, (ESP_X, ESP_Y, 0), (140, 60, 0), "C701341", "esp")
+# ------------------------------------------------------------------ ESP32 D1 mini (U1)
+D1_NETS = {"GND": "GND", "VCC": "+5V", "3V3": "+3V3", "IO25": "/OSC_OUT", "IO34": "/NTC_ADC",
+           "IO35": "/VBAT_ADC", "IO13": "/HEAT_CTRL", "IO21": "/SDA", "IO22": "/SCL",
+           "IO32": "/IO32", "IO33": "/IO33", "IO26": "/IO26", "IO27": "/IO27", "IO14": "/IO14", "IO4": "/IO4"}
+add("U1", ("rain-sensor", "ESP32_MiniKit"), "ESP32 D1 mini", ("rain-sensor", "ESP32_MiniKit"),
+    {n: D1_NETS.get(name) for n, name in minikit_pins().items()}, (D1_X, D1_Y, 0), block="esp")
 
-# ------------------------------------------------------------------ power
-add("Q1", ("Device", "Q_PMOS_GSD"), "AO3401A", ("Package_TO_SOT_SMD", "SOT-23"),
-    {1: "GND", 2: "+5V", 3: "/VIN_RAW"}, (7, 41, 0), (100, 40, 0), "C15127", "power")
-add("C1", ("Device", "C"), "22u/25V", C0805, {1: "+5V", 2: "GND"}, (11, 36, 90), (130, 40, 0), "C45783", "power")
-add("C2", ("Device", "C"), "10u/25V", C0805, {1: "+5V", 2: "GND"}, (15, 36, 90), (150, 40, 0), "C15850", "power")
+# ------------------------------------------------------------------ heater supply (as prototype)
+add("U2", ("rain-sensor", "XL6009_Module"), "XL6009 module", ("rain-sensor", "XL6009_Module"),
+    {1: "/VIN_HEAT", 2: "/HEAT_SW", 3: "/HEAT_P", 4: "/HEAT_N"}, (XL_X, XL_Y, 0), block="heater")
+add("Q1", ("Device", "Q_NMOS_GDS"), "AOD4184A", ("Package_TO_SOT_SMD", "TO-252-2"),
+    {1: "/HEAT_GATE", 2: "/HEAT_SW", 3: "GNDPWR"}, (14.0, 51.3, 180), lcsc="C99124", block="heater")
+add("R8", ("Device", "R"), "100R", R0805, {1: "/HEAT_CTRL", 2: "/HEAT_GATE"}, (25.2, 52.5, 90), lcsc="C17408", block="heater")
+add("R7", ("Device", "R"), R100K[0], R100K[1], {1: "/HEAT_GATE", 2: "GNDPWR"}, (23.1, 53.5, 90), lcsc=R100K[2], block="heater")
+add("C2", ("Device", "C"), "100n", C0805, {1: "/VIN_HEAT", 2: "GNDPWR"}, (19.0, 15.5, 90), lcsc="C49678", block="heater")
+add("C1", ("Device", "C_Polarized"), "1000u/16V", ("Capacitor_THT", "CP_Radial_D10.0mm_P5.00mm"),
+    {1: "/VIN_HEAT", 2: "GNDPWR"}, (8.0, 14.5, 0), block="heater", dnp_note="optional, hand-soldered")
+add("NT1", ("Device", "NetTie_2"), "NetTie", ("NetTie", "NetTie-2_SMD_Pad0.5mm"),
+    {1: "GNDPWR", 2: "GND"}, (22.3, 50.5, 0), block="power")
+add("NT2", ("Device", "NetTie_2"), "NetTie", ("NetTie", "NetTie-2_SMD_Pad2.0mm"),
+    {1: "/VIN_HEAT", 2: "+5V"}, (6.6, 58.0, 0), block="power")
 
-add("U2", ("Regulator_Linear", "AP2112K-3.3"), "AP2112K-3.3", ("Package_TO_SOT_SMD", "SOT-23-5"),
-    {1: "+5V", 2: "GND", 3: "+5V", 4: None, 5: "+3V3"}, (22, 30, 0), (100, 100, 0), "C51118", "ldo")
-add("C3", ("Device", "C"), "10u/25V", C0805, {1: "+3V3", 2: "GND"}, (27, 30, 90), (130, 100, 0), "C15850", "ldo")
-
-add("U3", ("Regulator_Switching", "MT3608"), "MT3608", ("Package_TO_SOT_SMD", "SOT-23-6"),
-    {1: "/SW", 2: "GND", 3: "/FB", 4: "/HEAT_CTRL", 5: "+5V", 6: None}, (14, 28, 0), (100, 150, 0), "C84817", "boost")
-add("L1", ("Device", "L"), "22u/1.8A", ("Inductor_SMD", "L_Bourns_SRN6045TA"), {1: "+5V", 2: "/SW"},
-    (14, 22, 90), (140, 150, 0), "C354622", "boost")
-add("D1", ("Device", "D_Schottky"), "SS34", ("Diode_SMD", "D_SMA"), {1: "+12V", 2: "/SW"},
-    (22, 40, 0), (170, 150, 0), "C8678", "boost")
-add("C10", ("Device", "C"), "22u/25V", C0805, {1: "+12V", 2: "GND"}, (28, 40, 90), (200, 150, 0), "C45783", "boost")
-add("C11", ("Device", "C"), "22u/25V", C0805, {1: "+12V", 2: "GND"}, (31, 40, 90), (220, 150, 0), "C45783", "boost")
-add("R4", ("Device", "R"), "180k", R0805, {1: "+12V", 2: "/FB_T"}, (17, 33, 90), (100, 190, 0), "C17501", "boost")
-add("R5", ("Device", "R"), "10k", R0805, {1: "/FB_T", 2: "/FB"}, (17, 36, 90), (120, 190, 0), "C17414", "boost")
-add("R6", ("Device", "R"), "10k", R0805, {1: "/FB", 2: "GND"}, (10, 30, 90), (140, 190, 0), "C17414", "boost")
-
-add("Q2", ("Device", "Q_NMOS_GSD"), "AO3400A", ("Package_TO_SOT_SMD", "SOT-23"),
-    {1: "/HEAT_GATE", 2: "GND", 3: "/HEAT_RET"}, (34, 40, 0), (100, 220, 0), "C20917", "heater")
-add("R7", ("Device", "R"), "100k", R0805, {1: "/HEAT_CTRL", 2: "GND"}, (40, 36, 90), (130, 220, 0), "C96346", "heater")
-add("R8", ("Device", "R"), "100R", R0805, {1: "/HEAT_CTRL", 2: "/HEAT_GATE"}, (37, 36, 90), (150, 220, 0), "C17408", "heater")
-
-# ------------------------------------------------------------------ ESP support
-add("C4", ("Device", "C"), "10u/25V", C0805, {1: "+3V3", 2: "GND"}, (23, 3.5, 90), (180, 40, 0), "C15850", "esp")
-add("C5", ("Device", "C"), "100n", C0805, {1: "+3V3", 2: "GND"}, (23, 7, 90), (200, 40, 0), "C49678", "esp")
-add("R13", ("Device", "R"), "10k", R0805, {1: "+3V3", 2: "/EN"}, (20, 3.5, 90), (220, 40, 0), "C17414", "esp")
-add("C9", ("Device", "C"), "1u", C0805, {1: "/EN", 2: "GND"}, (20, 7, 90), (240, 40, 0), "C28323", "esp")
-add("R14", ("Device", "R"), "10k", R0805, {1: "+3V3", 2: "/IO0"}, (48, 20.5, 0), (260, 40, 0), "C17414", "esp")
-add("SW1", ("Switch", "SW_Push"), "BOOT", ("Button_Switch_SMD", "SW_SPST_TL3342"),
-    {1: "/IO0", 2: "GND"}, (62, 8, 0), (280, 40, 0), "C318884", "esp")
-add("SW2", ("Switch", "SW_Push"), "RESET", ("Button_Switch_SMD", "SW_SPST_TL3342"),
-    {1: "/EN", 2: "GND"}, (62, 15, 0), (300, 40, 0), "C318884", "esp")
+# Heater current paths, fixed before autorouting: (net, width, [points]) on F.Cu.
+# J1 5V -> NT2 -> XL IN+, XL IN- -> Q1 drain, Q1 source -> J1 GND, XL OUT -> J3.
+PREROUTE = [
+    ("+5V", 1.2, [(10.24, 61.0), (8.6, 58.0)]),
+    ("/VIN_HEAT", 1.2, [(4.6, 58.0), (5.0, 57.6), (5.0, 30.0), (7.0, 28.0), (8.0, 28.0)]),
+    ("/VIN_HEAT", 1.2, [(8.0, 28.0), (8.0, 14.5)]),
+    ("/HEAT_SW", 1.5, [(8.0, 46.0), (8.0, 49.0), (10.3, 51.3), (13.0, 51.3)]),
+    ("GNDPWR", 1.5, [(19.04, 49.02), (21.3, 49.02), (21.3, 55.5), (18.0, 55.5), (15.32, 58.18), (15.32, 61.0)]),
+    ("/HEAT_P", 1.2, [(49.0, 28.0), (46.0, 31.0), (29.0, 31.0), (27.48, 32.52), (27.48, 61.0)]),
+    ("/HEAT_N", 1.2, [(49.0, 46.0), (46.0, 49.0), (34.04, 49.0), (32.56, 50.48), (32.56, 61.0)]),
+]
 
 # ------------------------------------------------------------------ rain sensor front end
 u4 = {p: None for p in range(1, 15)}
 u4.update({1: "/OSC_CAP", 2: "/OSC_OUT", 3: "GND", 5: "GND", 9: "GND", 11: "GND", 13: "GND", 7: "GND", 14: "+3V3"})
 add("U4", ("74xx", "74HC14"), "SN74HC14DR", ("Package_SO", "SOIC-14_3.9x8.7mm_P1.27mm"),
-    u4, (47, 36, 0), (100, 260, 0), "C6820", "sensor")
-add("R1", ("Device", "R"), "220k", R0805, {1: "/OSC_CAP", 2: "/OSC_OUT"}, (53, 33, 0), (140, 260, 0), "C17556", "sensor")
-add("C6", ("Device", "C"), "100n", C0805, {1: "+3V3", 2: "GND"}, (52, 40, 90), (160, 260, 0), "C49678", "sensor")
-add("R2", ("Device", "R"), "5.6k", R0805, {1: "/NTC_PU", 2: "/NTC_ADC"}, (58, 40, 90), (180, 260, 0), "C4382", "sensor")
-add("R3", ("Device", "R"), "5.6k", R0805, {1: "/NTC_PU", 2: "/NTC_ADC"}, (61, 40, 90), (200, 260, 0), "C4382", "sensor")
-add("C7", ("Device", "C"), "100n", C0805, {1: "/NTC_ADC", 2: "GND"}, (58, 44, 90), (220, 260, 0), "C49678", "sensor")
+    u4, (60.0, 46.5, 0), lcsc="C6820", block="sensor")
+add("R1", ("Device", "R"), "220k", R0805, {1: "/OSC_CAP", 2: "/OSC_OUT"}, (53.0, 45.0, 90), lcsc="C17556", block="sensor")
+add("C6", ("Device", "C"), "100n", C0805, {1: "+3V3", 2: "GND"}, (67.0, 44.0, 90), lcsc="C49678", block="sensor")
+add("R2", ("Device", "R"), "5.6k", R0805, {1: "/NTC_PU", 2: "/NTC_ADC"}, (59.0, 53.3, 0), lcsc="C4382", block="sensor")
+add("R3", ("Device", "R"), "5.6k", R0805, {1: "/NTC_PU", 2: "/NTC_ADC"}, (55.5, 53.3, 0), lcsc="C4382", block="sensor")
+add("C7", ("Device", "C"), "100n", C0805, {1: "/NTC_ADC", 2: "GND"}, (62.5, 53.3, 0), lcsc="C49678", block="sensor")
 add("SJ1", ("Jumper", "SolderJumper_3_Bridged12"), "NTC_PULLUP",
     ("Jumper", "SolderJumper-3_P1.3mm_Bridged12_RoundedPad1.0x1.5mm"),
-    {1: "+3V3", 2: "/NTC_PU", 3: "/IO32"}, (64, 44, 0), (240, 260, 0), "", "sensor")
+    {1: "+3V3", 2: "/NTC_PU", 3: "/IO32"}, (68.0, 49.5, 0), block="sensor")
 
 # ------------------------------------------------------------------ battery monitor
-add("R9", ("Device", "R"), "100k", R0805, {1: "/VBAT_IN", 2: "/VBAT_ADC"}, (5, 32, 90), (100, 300, 0), "C96346", "batt")
-add("R10", ("Device", "R"), "100k", R0805, {1: "/VBAT_ADC", 2: "/BAT_LOW"}, (5, 28, 90), (120, 300, 0), "C96346", "batt")
+add("R9", ("Device", "R"), R100K[0], R100K[1], {1: "/VBAT_IN", 2: "/VBAT_ADC"}, (56.5, 14.0, 90), lcsc=R100K[2], block="batt")
+add("R10", ("Device", "R"), R100K[0], R100K[1], {1: "/VBAT_ADC", 2: "/BAT_LOW"}, (56.5, 18.0, 90), lcsc=R100K[2], block="batt")
 add("SJ2", ("Jumper", "SolderJumper_2_Bridged"), "BAT_SENSE",
     ("Jumper", "SolderJumper-2_P1.3mm_Bridged_RoundedPad1.0x1.5mm"), {1: "/BAT_LOW", 2: "GND"},
-    (5, 24, 90), (140, 300, 0), "", "batt")
-add("C8", ("Device", "C"), "100n", C0805, {1: "/VBAT_ADC", 2: "GND"}, (9, 30, 90), (160, 300, 0), "C49678", "batt")
+    (56.5, 22.0, 90), block="batt")
+add("C8", ("Device", "C"), "100n", C0805, {1: "/VBAT_ADC", 2: "GND"}, (59.3, 15.5, 90), lcsc="C49678", block="batt")
 
-# ------------------------------------------------------------------ I2C pull-ups
-add("R11", ("Device", "R"), "4.7k", R0805, {1: "+3V3", 2: "/SDA"}, (62, 27, 90), (100, 340, 0), "C17673", "i2c")
-add("R12", ("Device", "R"), "4.7k", R0805, {1: "+3V3", 2: "/SCL"}, (62, 30, 90), (120, 340, 0), "C17673", "i2c")
+# ------------------------------------------------------------------ I2C: pull-ups, on-board HTU21D
+add("R11", ("Device", "R"), "4.7k", R0805, {1: "+3V3", 2: "/SDA"}, (84.0, 13.0, 90), lcsc="C17673", block="i2c")
+add("R12", ("Device", "R"), "4.7k", R0805, {1: "+3V3", 2: "/SCL"}, (84.0, 17.0, 90), lcsc="C17673", block="i2c")
+add("U3", ("Sensor_Humidity", "Si7021-A20"), "HTU21D", ("Package_DFN_QFN", "DFN-6-1EP_3x3mm_P1mm_EP1.5x2.4mm"),
+    {1: "/SDA", 2: "GND", 3: None, 4: None, 5: "+3V3", 6: "/SCL", 7: "GND"}, (93.5, 47.0, 0), lcsc="C83479", block="i2c")
+add("C9", ("Device", "C"), "100n", C0805, {1: "+3V3", 2: "GND"}, (89.5, 47.0, 90), lcsc="C49678", block="i2c")
+# Slots around the sensor tongue keep board heat away (x1, y1, x2, y2 of each straight slot, 1 mm wide)
+SLOTS = [(85.5, 40.5, 98.5, 40.5), (85.5, 53.5, 98.5, 53.5), (85.5, 40.5, 85.5, 43.5), (85.5, 50.5, 85.5, 53.5)]
+# No copper below the D1 mini antenna
+KEEPOUT = (61.0, 0.0, 93.0, 6.8)
 
 # ------------------------------------------------------------------ test points / mounting
-for i, (net, x, y) in enumerate([("+5V", 20, 47.5), ("+3V3", 30, 25), ("+12V", 28, 46), ("GND", 24, 47.5), ("/OSC_OUT", 55, 25)], 1):
+for i, (net, x, y) in enumerate([("+5V", 38, 22), ("+3V3", 41, 22), ("/HEAT_P", 44, 22), ("GND", 47, 22),
+                                  ("/OSC_OUT", 53.0, 50.5)], 1):
     add(f"TP{i}", ("Connector", "TestPoint"), net.strip("/"), ("TestPoint", "TestPoint_Pad_D1.5mm"),
-        {1: net}, (x, y, 0), (100 + 20 * i, 380, 0), "", "misc")
-for i, (x, y) in enumerate([(3.5, 3.5), (W - 3.5, 3.5), (3.5, H - 3.5), (W - 3.5, H - 3.5)], 1):
+        {1: net}, (x, y, 0), block="misc")
+for i, (x, y) in enumerate([(HOLE, HOLE), (W - HOLE, HOLE), (HOLE, H - HOLE), (W - HOLE, H - HOLE)], 1):
     add(f"H{i}", ("Mechanical", "MountingHole"), "M3", ("MountingHole", "MountingHole_3.2mm_M3"), {},
-        (x, y, 0), (100 + 20 * i, 400, 0), "", "misc")
-add("FLG1", ("power", "PWR_FLAG"), "PWR_FLAG", None, {1: "+5V"}, None, (200, 380, 0), "", "misc")
-add("FLG2", ("power", "PWR_FLAG"), "PWR_FLAG", None, {1: "GND"}, None, (220, 380, 0), "", "misc")
-
-add("FLG3", ("power", "PWR_FLAG"), "PWR_FLAG", None, {1: "+12V"}, None, (240, 380, 0), "", "misc")
+        (x, y, 0), block="misc")
+for i, net in enumerate(["+5V", "GND", "GNDPWR"], 1):
+    add(f"FLG{i}", ("power", "PWR_FLAG"), "PWR_FLAG", None, {1: net}, None, block="misc")
 
 BLOCK_TITLES = {}

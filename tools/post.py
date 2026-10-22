@@ -76,14 +76,20 @@ print("gnd vias", n_new)
 # ---- stitch every F.Cu pour fragment to the B.Cu plane
 def stitch():
     added = 0
-    fz = [z for z in b.Zones() if z.GetFirstLayer() == pcbnew.F_Cu][0]
-    ps = fz.GetFilledPolysList(pcbnew.F_Cu)
+    for layer in (pcbnew.F_Cu, pcbnew.B_Cu):
+        added += stitch_layer(layer)
+    return added
+
+def stitch_layer(layer):
+    added = 0
+    fz = [z for z in b.Zones() if not z.GetIsRuleArea() and z.GetFirstLayer() == layer][0]
+    ps = fz.GetFilledPolysList(layer)
     vias = [v for v in b.GetTracks() if v.Type() == pcbnew.PCB_VIA_T and v.GetNetCode() == gnd.GetNetCode()]
     for i in range(ps.OutlineCount()):
         o = pcbnew.SHAPE_POLY_SET(); o.AddOutline(ps.Outline(i))
         for h in range(ps.HoleCount(i)): o.AddHole(ps.Hole(i, h))
         bb = o.BBox()
-        if any(bb.Contains(v.GetPosition()) and o.Collide(v.GetPosition()) for v in vias): continue
+        if sum(1 for v in vias if bb.Contains(v.GetPosition()) and o.Collide(v.GetPosition())) >= 2: continue
         # candidate grid
         best = None
         step = FromMM(0.1)
@@ -95,13 +101,15 @@ def stitch():
                 if pt.x < FromMM(100 + 1.0) or pt.x > FromMM(100 + W - 1.0) or pt.y < FromMM(80 + 1.0) or pt.y > FromMM(80 + H - 1.0):
                     y += step; continue
                 ok = all(o.Collide(VECTOR2I(pt.x + int(FromMM(0.3) * math.cos(a)), pt.y + int(FromMM(0.3) * math.sin(a)))) for a in [k * math.pi / 4 for k in range(8)]) and o.Collide(pt)
-                if ok and clear(None, items_other(), [circ(pt, VIA_D)]): best = pt; break
+                holes = [v.GetPosition() for v in vias] + [p.GetPosition() for f in b.GetFootprints() for p in f.Pads() if p.GetAttribute() == pcbnew.PAD_ATTRIB_PTH]
+                far = all((pt.x - h.x) ** 2 + (pt.y - h.y) ** 2 > FromMM(1.6) ** 2 for h in holes)
+                if ok and far and clear(None, items_other(), [circ(pt, VIA_D)]): best = pt; break
                 y += step
             x += step
         if best is None:
             # fragment too narrow for a via: drop one beside a SMD GND pad inside it
             pads = [(fp, p) for fp in b.GetFootprints() for p in fp.Pads() if p.GetNetCode() == gnd.GetNetCode()
-                    and p.GetAttribute() == pcbnew.PAD_ATTRIB_SMD and p.IsOnLayer(pcbnew.F_Cu) and o.Collide(p.GetPosition())]
+                    and p.GetAttribute() == pcbnew.PAD_ATTRIB_SMD and p.IsOnLayer(layer) and o.Collide(p.GetPosition())]
             if pads and pad_via(*pads[0]): added += 1
             continue
         v = pcbnew.PCB_VIA(b); v.SetPosition(best); v.SetWidth(FromMM(VIA_D)); v.SetDrill(FromMM(VIA_DR))
@@ -112,9 +120,16 @@ for _ in range(3):
     a = stitch(); print('stitch vias', a)
     if a == 0: break
 
+# drop dangling stubs the autorouter leaves behind
+tmp = tempfile.mktemp(suffix='.rpt'); pcbnew.WriteDRCReport(b, tmp, pcbnew.EDA_UNITS_MILLIMETRES, True); txt = open(tmp).read(); os.remove(tmp)
+for m in re.finditer(r'track_dangling.*?@\(([\d.]+) mm, ([\d.]+) mm\): Track', txt, re.S):
+    p0 = VECTOR2I(FromMM(float(m.group(1))), FromMM(float(m.group(2))))
+    for t in list(b.GetTracks()):
+        if t.Type() == pcbnew.PCB_TRACE_T and not t.IsLocked() and t.GetLength() < FromMM(0.5) and t.HitTest(p0, FromMM(0.05)):
+            b.Remove(t); print('removed stub', t.GetNetname())
 tmp = tempfile.mktemp(suffix='.rpt'); pcbnew.ZONE_FILLER(b).Fill(b.Zones())
 pcbnew.WriteDRCReport(b, tmp, pcbnew.EDA_UNITS_MILLIMETRES, True); txt = open(tmp).read(); os.remove(tmp)
-for m in re.finditer(r'starved_thermal.*?Pad (\S+) \[GND\] of (\S+)', txt, re.S):
+for m in re.finditer(r'starved_thermal.*?[Pp]ad (\S+) \[GND\] of (\S+)', txt, re.S):
     fp = b.FindFootprintByReference(m.group(2))
     for pad in fp.Pads():
         if pad.GetNumber() == m.group(1): pad.SetZoneConnection(pcbnew.ZONE_CONNECTION_FULL); print('full connection', m.group(2), m.group(1))

@@ -13,7 +13,7 @@ subprocess.run(["kicad-cli","pcb","export","drill","--format","excellon","--dril
 b = pcbnew.LoadBoard(pcb)
 # Most specific pattern first; the loop below stops at the first match.
 ROT = [(r"^SOT-23-[56]", 270), (r"^SOT-23$", 180), (r"^SOIC-", 270), (r"^ESP32", 270)]
-NO_ASSY = {"J1","J2","J3","J6","J4","J5","J7","J8"}  # through-hole parts: hand-solder
+NO_ASSY = {"J1","J2","J3","J4","J5","J6","J8","U1","U2","C1"}  # through-hole parts and modules: hand-solder
 rows = {}; cpl = []
 for fp in b.GetFootprints():
     ref = fp.GetReference(); c = C.get(ref)
@@ -40,10 +40,5 @@ def write(sfx, rows, cpl):
         w = csv.writer(f); w.writerow(["Designator", "Mid X", "Mid Y", "Layer", "Rotation"])
         for r in sorted(cpl): w.writerow([r[0], f"{r[1]}mm", f"{r[2]}mm", r[3], r[4]])
 write("", rows, cpl)
-# UE variant (u.FL antenna): same Gerbers
-ue_rows = {(("ESP32-WROOM-32UE-N4", k[1], "C701344") if r == ["U1"] else k): r for k, r in rows.items()}
-# JLCPCB's UE model sits 90° turned against the 32E model
-ue_cpl = [(r[0], r[1], r[2], r[3], (r[4] + 90) % 360) if r[0] == "U1" else r for r in cpl]
-write("_ue", ue_rows, ue_cpl)
 shutil.make_archive(f"{out}/regensensor_gerbers", "zip", f"{out}/gerbers")
 print(os.listdir(f"{out}/gerbers")); print(open(f"{out}/bom_jlcpcb.csv").read())

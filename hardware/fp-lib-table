@@ -1,0 +1,4 @@
+(fp_lib_table
+  (version 7)
+  (lib (name "rain-sensor")(type "KiCad")(uri "${KIPRJMOD}/rain-sensor.pretty")(options "")(descr "Project footprints: ESP32 D1 mini, XL6009 module"))
+)

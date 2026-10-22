@@ -3,7 +3,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 import pcbnew
 from pcbnew import VECTOR2I, FromMM
 import design
-from design import C, W, H, ESP_X, ESP_Y
+from design import C, W, H, SLOTS, KEEPOUT, PREROUTE
 import placement
 for k,v in placement.POS.items(): C[k]['pcb']=v
 
@@ -11,6 +11,7 @@ OX, OY = 100.0, 80.0
 out = sys.argv[1]
 FPDIR = "/usr/share/kicad/footprints"
 PROJ_LIB = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "hardware", "rain-sensor.pretty")
+REFHIDE = ("J", "SW", "TP", "H", "NT")
 
 def P(x, y): return VECTOR2I(FromMM(OX + x), FromMM(OY + y))
 
@@ -42,14 +43,12 @@ for ref, c in C.items():
             pad.SetNet(nets[c["pins"][k]])
     if ref == "U1":
         for pad in fp.Pads():
-            if pad.GetNumber() == "39":
-                pad.SetZoneConnection(pcbnew.ZONE_CONNECTION_FULL)
-                if pad.GetAttribute() == pcbnew.PAD_ATTRIB_PTH:
-                    pad.SetDrillSize(pcbnew.VECTOR2I(FromMM(0.3), FromMM(0.3))); pad.SetSize(pcbnew.VECTOR2I(FromMM(0.6), FromMM(0.6)))
+            if pad.GetNetname() == "GND": pad.SetZoneConnection(pcbnew.ZONE_CONNECTION_FULL)
     fp.Reference().SetTextSize(pcbnew.VECTOR2I(FromMM(0.8), FromMM(0.8))); fp.Reference().SetTextThickness(FromMM(0.12))
     fp.Value().SetVisible(False)
-    if ref[:2] in ('J1','J2','J3','J4','J5','J6','J7','J8') or ref.startswith(('SW','TP','J','H')): fp.Reference().SetVisible(False)
-    if ref in ('J1','J2','J3','J4','J5','J6','J7','J8','SW1','SW2'): fp.Reference().SetVisible(False)
+    if ref.startswith(REFHIDE): fp.Reference().SetVisible(False)
+    if ref == "R8": fp.Reference().SetPosition(P(x + 1.3, y)); fp.Reference().SetTextAngleDegrees(90)
+    if ref == "Q1": fp.Reference().SetPosition(P(x - 6.6, y + 1.8)); fp.Reference().SetTextAngleDegrees(90)
     b.Add(fp)
     # LCSC field
     if c["lcsc"]:
@@ -60,7 +59,7 @@ for ref, c in C.items():
 
 
 # ---- pre-placed GND vias for pads that are hard to reach for the autorouter
-PRE_GND = [("U3", "2", -2.0, 0), ("U4", "3", -2.0, 0), ("U4", "5", -2.0, 0), ("U4", "7", -2.0, 0),
+PRE_GND = [("C9", "2", 0, -1.6), ("SJ2", "2", -1.8, 0), ("U4", "3", -2.0, 0), ("U4", "5", -2.0, 0), ("U4", "7", -2.0, 0),
            ("U4", "9", 2.0, 0), ("U4", "11", 2.0, 0), ("U4", "13", 2.0, 0)]
 for ref, num, dx, dy in PRE_GND:
     fp = b.FindFootprintByReference(ref)
@@ -69,6 +68,12 @@ for ref, num, dx, dy in PRE_GND:
     v = pcbnew.PCB_VIA(b); v.SetPosition(p); v.SetWidth(FromMM(0.6)); v.SetDrill(FromMM(0.3))
     v.SetViaType(pcbnew.VIATYPE_THROUGH); v.SetLayerPair(pcbnew.F_Cu, pcbnew.B_Cu); v.SetNet(nets["GND"]); b.Add(v)
     t = pcbnew.PCB_TRACK(b); t.SetStart(c); t.SetEnd(p); t.SetWidth(FromMM(0.3)); t.SetLayer(pcbnew.F_Cu); t.SetNet(nets["GND"]); b.Add(t)
+
+# ---- fixed heater-current tracks
+for name, w, pts in PREROUTE:
+    for a, c2 in zip(pts, pts[1:]):
+        t = pcbnew.PCB_TRACK(b); t.SetStart(P(*a)); t.SetEnd(P(*c2)); t.SetWidth(FromMM(w))
+        t.SetLayer(pcbnew.F_Cu); t.SetNet(nets[name]); t.SetLocked(True); b.Add(t)
 
 # ---- design rules / net classes
 ds = b.GetDesignSettings()
@@ -84,7 +89,7 @@ def mk(name, tw, names):
 
     for n in names:
         if n in nets: nets[n].SetNetClass(nc)
-mk("Power", 0.6, ["+5V", "/VIN_RAW", "+12V", "/SW", "/HEAT_RET"])
+mk("Power", 0.8, ["+5V", "/VIN_HEAT", "GNDPWR", "/HEAT_P", "/HEAT_N", "/HEAT_SW"])
 mk("Power33", 0.4, ["+3V3"])
 
 # board outline
@@ -126,6 +131,40 @@ def gnd_zone(layer):
     z.SetIslandRemovalMode(pcbnew.ISLAND_REMOVAL_MODE_ALWAYS)
     b.Add(z)
 gnd_zone(pcbnew.F_Cu); gnd_zone(pcbnew.B_Cu)
+
+# ---- slots around the HTU21D tongue (Edge.Cuts, 1 mm wide, merged into one cut-out)
+from shapely.geometry import LineString
+from shapely.ops import unary_union
+cut = unary_union([LineString([(x1, y1), (x2, y2)]).buffer(0.5, quad_segs=8) for (x1, y1, x2, y2) in SLOTS])
+for poly in getattr(cut, "geoms", [cut]):
+    ps = pcbnew.SHAPE_POLY_SET(); ps.NewOutline()
+    for (x, y) in list(poly.exterior.coords)[:-1]: ps.Append(FromMM(OX + x), FromMM(OY + y))
+    sh = pcbnew.PCB_SHAPE(b); sh.SetShape(pcbnew.SHAPE_T_POLY); sh.SetLayer(pcbnew.Edge_Cuts)
+    sh.SetPolyShape(ps); sh.SetFilled(False); sh.SetWidth(FromMM(0.05)); b.Add(sh)
+
+def rule_area(poly_pts, tracks=True):
+    z = pcbnew.ZONE(b); z.SetIsRuleArea(True); z.SetDoNotAllowCopperPour(False); z.SetDoNotAllowTracks(tracks)
+    z.SetDoNotAllowVias(True); z.SetDoNotAllowPads(False); z.SetDoNotAllowFootprints(False)
+    ls_ = pcbnew.LSET(); ls_.AddLayer(pcbnew.F_Cu); ls_.AddLayer(pcbnew.B_Cu); z.SetLayerSet(ls_)
+    o_ = z.Outline(); o_.NewOutline()
+    for (x, y) in poly_pts: o_.Append(FromMM(OX + x), FromMM(OY + y))
+    b.Add(z)
+# keep the router off the slot edges and out of the narrow bridges at the board edge
+for poly in getattr(cut.buffer(0.9, quad_segs=4), "geoms", [cut.buffer(0.9, quad_segs=4)]):
+    rule_area(list(poly.exterior.coords)[:-1])
+rule_area([(97.0, 38.5), (W, 38.5), (W, 55.5), (97.0, 55.5)])
+# copper bridge of the wide net tie NT2 is not a pad: keep the router off it
+_nt = C["NT2"]["pcb"]; rule_area([(_nt[0] - 0.9, _nt[1] - 1.0), (_nt[0] + 0.9, _nt[1] - 1.0), (_nt[0] + 0.9, _nt[1] + 1.0), (_nt[0] - 0.9, _nt[1] + 1.0)])
+
+# ---- keep-out below the D1 mini antenna (no copper on either layer)
+ko = pcbnew.ZONE(b); ko.SetIsRuleArea(True); ko.SetDoNotAllowCopperPour(True); ko.SetDoNotAllowTracks(True)
+ko.SetDoNotAllowVias(True); ko.SetDoNotAllowPads(False); ko.SetDoNotAllowFootprints(False)
+ls = pcbnew.LSET(); ls.AddLayer(pcbnew.F_Cu); ls.AddLayer(pcbnew.B_Cu); ko.SetLayerSet(ls)
+o = ko.Outline(); o.NewOutline()
+kx1, ky1, kx2, ky2 = KEEPOUT
+for (x, y) in [(kx1, ky1), (kx2, ky1), (kx2, ky2), (kx1, ky2)]: o.Append(FromMM(OX + x), FromMM(OY + y))
+b.Add(ko)
+
 ds.SetAuxOrigin(VECTOR2I(FromMM(OX), FromMM(OY + H)))
 b.Save(out)
 print("saved", out)

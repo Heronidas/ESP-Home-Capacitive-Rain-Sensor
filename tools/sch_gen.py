@@ -1,5 +1,5 @@
 """Generate regensensor.kicad_sch from design.py (KiCad 7 format, opens fine in KiCad 8/9/10)."""
-import re, uuid, math, sys
+import re, uuid, math, sys, os
 from kiutils.symbol import SymbolLib
 import design as D
 
@@ -13,9 +13,12 @@ def uid():
     return str(uuid.uuid4())
 
 
+PROJ_SYMLIB = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "hardware", "rain-sensor.kicad_sym")
+
+
 def load(lib):
     if lib not in _libs:
-        _libs[lib] = SymbolLib.from_file(f"{SYMDIR}/{lib}.kicad_sym")
+        _libs[lib] = SymbolLib.from_file(PROJ_SYMLIB if lib == "rain-sensor" else f"{SYMDIR}/{lib}.kicad_sym")
     return _libs[lib]
 
 
@@ -154,7 +157,7 @@ def place(ref):
             net = c["pins"].get(int(num)) if str(num).isdigit() else None
             pin_uuids.append(num)
             if net is None:
-                if c["sym"][1] in ("Conn_01x03", "Conn_01x04", "Conn_01x05", "Conn_01x08"):
+                if c["sym"][1].startswith("Conn_01x") or (pname == "NC" and lib != "rain-sensor"):
                     continue
                 out_nc.append(f'  (no_connect (at {f(ax)} {f(ay)}) (uuid {uid()}))')
                 continue
@@ -199,29 +202,29 @@ def text(s, x, y, size=2.0):
 
 # ---------------------------------------------------------------- sheet layout (A3, 420 x 297 mm)
 LAYOUT = {
-    "J1": (45.72, 55.88), "Q1": (101.6, 55.88), "C1": (139.7, 55.88), "C2": (162.56, 55.88),
-    "FLG1": (185.42, 55.88), "FLG2": (200.66, 55.88), "FLG3": (215.9, 55.88),
-    "U2": (60.96, 132.08), "C3": (129.54, 132.08),
-    "U3": (60.96, 190.5), "L1": (116.84, 177.8), "D1": (144.78, 190.5), "C10": (172.72, 190.5),
-    "C11": (195.58, 190.5), "R4": (116.84, 208.28), "R5": (139.7, 208.28), "R6": (162.56, 208.28),
-    "Q2": (60.96, 246.38), "R7": (116.84, 246.38), "R8": (139.7, 246.38),
-    "R9": (60.96, 279.4), "R10": (86.36, 279.4), "SJ2": (111.76, 279.4), "C8": (137.16, 279.4),
-    "J4": (241.3, 35.56), "J5": (274.32, 35.56), "J6": (307.34, 35.56), "R11": (335.28, 35.56), "R12": (355.6, 35.56),
-    "U1": (312.42, 116.84),
-    "C4": (378.46, 66.04), "C5": (396.24, 66.04), "R13": (378.46, 96.52), "C9": (396.24, 96.52),
-    "R14": (378.46, 127), "SW1": (378.46, 152.4), "SW2": (396.24, 152.4),
-    "J7": (241.3, 96.52), "J8": (241.3, 132.08),
-    "R1": (370.84, 195.58), "C6": (391.16, 195.58), "R2": (302.26, 236.22), "R3": (322.58, 236.22), "C7": (342.9, 236.22),
-    "SJ1": (368.3, 236.22), "J2": (392.43, 215.9), "J3": (392.43, 236.22),
-    "TP1": (210.82, 269.24), "TP2": (223.52, 269.24), "TP3": (236.22, 269.24), "TP4": (248.92, 269.24), "TP5": (210.82, 284.48),
-    "H1": (223.52, 284.48), "H2": (236.22, 284.48), "H3": (248.92, 284.48), "H4": (259.08, 284.48),
+    # power input and heater (left)
+    "J1": (45.72, 55.88), "NT2": (88.9, 50.8), "NT1": (88.9, 66.04),
+    "FLG1": (114.3, 40.64), "FLG2": (114.3, 81.28), "FLG3": (134.62, 81.28),
+    "C1": (60.96, 116.84), "C2": (81.28, 116.84), "U2": (139.7, 116.84), "J3": (190.5, 116.84),
+    "Q1": (101.6, 165.1), "R8": (66.04, 165.1), "R7": (83.82, 182.88),
+    "R9": (50.8, 233.68), "R10": (73.66, 233.68), "SJ2": (96.52, 233.68), "C8": (119.38, 233.68),
+    # ESP32 D1 mini and headers (middle)
+    "U1": (264.16, 116.84), "J8": (215.9, 195.58),
+    # I2C (right top)
+    "J4": (340.36, 35.56), "J5": (365.76, 35.56), "J6": (391.16, 35.56), "R11": (340.36, 66.04), "R12": (360.68, 66.04),
+    "U3": (370.84, 101.6), "C9": (340.36, 101.6),
+    # sensor front end (right bottom)
+    "R1": (370.84, 165.1), "C6": (391.16, 165.1), "R2": (325.12, 218.44), "R3": (345.44, 218.44), "C7": (365.76, 218.44),
+    "SJ1": (391.16, 218.44), "J2": (391.16, 246.38),
+    "TP1": (215.9, 256.54), "TP2": (228.6, 256.54), "TP3": (241.3, 256.54), "TP4": (254.0, 256.54), "TP5": (266.7, 256.54),
+    "H1": (215.9, 274.32), "H2": (228.6, 274.32), "H3": (241.3, 274.32), "H4": (254.0, 274.32),
 }
-U4_UNITS = {1: (243.84, 190.5), 2: (243.84, 205.74), 3: (243.84, 220.98), 4: (289.56, 190.5), 5: (289.56, 205.74),
-            6: (289.56, 220.98), 7: (335.28, 205.74)}
+U4_UNITS = {1: (307.34, 165.1), 2: (307.34, 180.34), 3: (307.34, 195.58), 4: (337.82, 180.34), 5: (337.82, 195.58),
+            6: (368.3, 195.58), 7: (391.16, 195.58)}
 
 for ref, (x, y) in LAYOUT.items():
     D.C[ref]["sch"] = (x, y, 0)
-D.C["U4"]["sch"] = (243.84, 190.5, 0)
+D.C["U4"]["sch"] = U4_UNITS[1] + (0,)
 D.C["U4"]["unit_pos"] = U4_UNITS
 
 ORDER = [r for r in D.C]
@@ -230,24 +233,24 @@ ORDER = [r for r in D.C]
 def build(path):
     for ref in ORDER:
         place(ref)
-    titles = [("5 V input, reverse-polarity protection, battery-sense input", 20, 30),
-              ("3.3 V LDO", 20, 105), ("12 V boost converter for the sensor heater (MT3608)", 20, 155),
-              ("Heater switch (low side)", 20, 225), ("Battery voltage monitor (100k / 100k divider, optional)", 20, 262),
-              ("I2C connectors and pull-ups", 225, 25), ("Programming / expansion headers", 225, 80),
-              ("ESP32-WROOM-32E", 280, 62), ("ESP32 support", 370, 55),
-              ("Rain sensor front end: SN74HC14 oscillator, NTC pull-up, sensor terminals", 225, 172),
-              ("Test points and mounting holes", 208, 262)]
+    titles = [("5 V input; heater (GNDPWR) and logic (GND) meet only at J1 via NT1/NT2", 20, 30),
+              ("Heater: XL6009 boost module, low-side switch AOD4184A (as prototype)", 20, 95),
+              ("Battery voltage monitor (100k / 100k divider, optional)", 20, 215),
+              ("ESP32 D1 mini (MiniKit layout) and expansion header", 205, 80),
+              ("I2C connectors, pull-ups, on-board HTU21D", 330, 25),
+              ("Rain sensor front end: SN74HC14 oscillator, NTC pull-up, sensor terminal", 290, 150),
+              ("Test points and mounting holes", 205, 245)]
     for t, x, y in titles:
         text(t, x, y)
     libtxt = "\n".join(sym_text(l, n) for (l, n) in used_libsyms)
-    for pn in ("GND", "+3V3", "+5V", "+12V", "PWR_FLAG"):
+    for pn in ("GND", "GNDPWR", "+3V3", "+5V", "PWR_FLAG"):
         libtxt += "\n" + sym_text("power", pn)
     libtxt = re.sub(r"^", "  ", libtxt, flags=re.M)
     s = (
         f'(kicad_sch (version 20230121) (generator eeschema)\n\n  (uuid {ROOT})\n\n  (paper "A3")\n\n'
-        f'  (title_block\n    (title "Rain sensor board")\n    (date "2026-09-26")\n    (rev "A")\n'
+        f'  (title_block\n    (title "Rain sensor board")\n    (date "2026-10-21")\n    (rev "B")\n'
         f'    (comment 1 "ESP32 carrier for the RC-SPC1KA capacitive rain sensor")\n'
-        f'    (comment 2 "5 V in, on-board 3.3 V LDO and 12 V heater boost")\n  )\n\n'
+        f'    (comment 2 "5 V in, ESP32 D1 mini, external XL6009 heater boost module")\n  )\n\n'
         f'  (lib_symbols\n{libtxt}\n  )\n\n'
         + "\n".join(out_wires + out_labels + out_nc + out_texts + out_syms) +
         f'\n\n  (sheet_instances\n    (path "/" (page "1"))\n  )\n)\n'
