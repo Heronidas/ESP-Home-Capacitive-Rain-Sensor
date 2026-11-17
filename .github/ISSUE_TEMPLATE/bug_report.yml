@@ -1,0 +1,41 @@
+name: Bug report
+description: The sensor reports something wrong, or the firmware or board misbehaves.
+labels: [bug]
+body:
+  - type: dropdown
+    id: board
+    attributes:
+      label: Board
+      options: [Rev B, Rev A, Module build (perfboard)]
+    validations:
+      required: true
+  - type: dropdown
+    id: variant
+    attributes:
+      label: Firmware variant
+      options: [regensensor_de.yaml, regensensor_en.yaml, regensensor_mqtt_de.yaml, regensensor_mqtt_en.yaml]
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: ESPHome version and firmware commit or release
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+      description: For a wrong rain report, give the time and what the weather did.
+    validations:
+      required: true
+  - type: textarea
+    id: values
+    attributes:
+      label: Readings around the event
+      description: Capacitance, Capacitance Rate of Change, Capacitance Steps, Capacitance Unrest, Surface Temperature and Weather State from the history, as a screenshot or CSV. A device log helps most.
+  - type: textarea
+    id: settings
+    attributes:
+      label: Changed settings
+      description: Dry Frequency and every threshold you changed from its default.

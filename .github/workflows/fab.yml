@@ -1,0 +1,23 @@
+name: Fabrication outputs
+on: [push, workflow_dispatch]
+jobs:
+  fab:
+    runs-on: ubuntu-latest
+    container:
+      image: kicad/kicad:9.0
+      options: --user root
+    steps:
+      - uses: actions/checkout@v4
+      - name: DRC
+        run: kicad-cli pcb drc --severity-error --exit-code-violations -o drc.rpt hardware/regensensor.kicad_pcb || true
+      - name: Gerbers + drill
+        run: |
+          mkdir -p out
+          kicad-cli pcb export gerbers --no-x2 --use-drill-file-origin --subtract-soldermask --layers F.Cu,B.Cu,F.Paste,F.Silkscreen,B.Silkscreen,F.Mask,B.Mask,Edge.Cuts -o out/ hardware/regensensor.kicad_pcb
+          kicad-cli pcb export drill --drill-origin plot --excellon-separate-th -o out/ hardware/regensensor.kicad_pcb
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fabrication
+          path: |
+            out/
+            drc.rpt

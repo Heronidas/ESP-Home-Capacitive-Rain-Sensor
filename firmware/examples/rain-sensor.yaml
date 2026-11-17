@@ -1,0 +1,13 @@
+# Device config: loads the firmware from GitHub; "Install" fetches updates.
+# Other variants: regensensor_de.yaml, regensensor_mqtt_en.yaml, regensensor_mqtt_de.yaml
+# Any substitution of the loaded file can be overridden here.
+substitutions:
+  name: rain-sensor
+  friendly_name: Rain Sensor
+
+packages:
+  rain_sensor:
+    url: https://github.com/Heronidas/ESP-Home-Capacitive-Rain-Sensor
+    ref: main
+    files: [firmware/regensensor_en.yaml]
+    refresh: 1d

@@ -1,0 +1,18 @@
+secrets.yaml
+.esphome/
+*.kicad_prl
+*-backups/
+_autosave-*
+fp-info-cache
+*.bak
+__pycache__/
+
+# KiCad local history
+.history/
+
+# Local agent and project notes
+AGENTS.md
+CLAUDE.md
+SDL.md
+claude-code-mcp-config.json
+regensensor-kontext.md

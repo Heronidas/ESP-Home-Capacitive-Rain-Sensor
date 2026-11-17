@@ -1,0 +1,1203 @@
+# RC-SPC1KA capacitive rain sensor on rain-sensor-board (Rev B: ESP32 D1 mini, Rev A: ESP32-WROOM-32E; ESPHome).
+# Standalone variant: local web page and MQTT (Home Assistant discovery,
+# FHEM, ioBroker, ...), no Home Assistant API. Hardware: ../README.md.
+# secrets.yaml needs wifi_ssid, wifi_password, wifi_ap_password, regensensor_ota_password,
+# mqtt_broker, mqtt_username, mqtt_password.
+# Calibrate: read the dry "Frequenz", enter it as "Trockenfrequenz", then tune thresholds.
+
+substitutions:
+  name: regensensor
+  friendly_name: Regensensor
+
+  pin_i2c_sda: GPIO21
+  pin_i2c_scl: GPIO22
+  pin_heizung: GPIO13    # heater MOSFET (Rev A: also boost enable)
+  gpio_c_freq: GPIO25    # oscillator input (hardware PCNT)
+  pin_ntc: GPIO34        # GPIO32 if solder jumper SJ1 is moved
+  pin_batt_adc: GPIO35   # J1 BAT via 100k/100k divider
+
+  batt_teiler_faktor: "2.0"
+
+  # NTC divider: 3V3 --[r_pullup]-- ADC --[NTC]-- GND. Permanently on 3V3
+  # (0.87 mA with 2x 5.6k parallel); change only if R2/R3 differ.
+  r_pullup: "2800"
+  # ADC gain trim. Compare against a reference thermometer (same air, no sun,
+  # heater off >= 30 min), then adjust; keep "Temperatur-Offset (NTC)" at 0.
+  adc_faktor: "1.0"
+
+  # Plausible NTC range; outside = fault, heater off (open wire / short).
+  ntc_r_min: "80"        # ~108 C
+  ntc_r_max: "13000"     # ~-29 C
+  temp_max: "60.0"       # hard limit above the "Heiztemperatur" number
+  temp_hyst: "5.0"       # heater may switch on again this far below the target
+
+  # Capacitance: C = Trockenfrequenz * 100 / f (dry frequency = 100 pF).
+  # The runtime number "Trockenfrequenz" overrides this start value.
+  # Cable, holder and air humidity shift it; measure your own outdoors.
+  c_freq_referenz_start: "125000.0"   # rev B: R1 47k + Cs 100 nF (rev A: 220k || 47k + Cs, ~152000)
+  c_steht: "10000.0"      # pF reported while the oscillator stalls
+
+  # Precipitation lasts while the 5-min unrest (standard deviation of the 10-s
+  # samples) stays up: dry below 1, dew and fog up to ~2.5 (rising or drying), rain far above.
+  unruhe_ruhig: "1.5"    # pF, below = calm, counts for "Schwelle für Regenende"
+  # Day start on an already wet plate: steps from "Sprünge Regenbeginn" also start
+  # precipitation unless the level falls (a drying plate steps too: fog, sun). Steps,
+  # not unrest: a fast smooth dew rise inflates the unrest (29.10.: 2.6) but not the steps (0.3).
+  pegel_fall: "2.0"      # pF over 5 min; a larger smooth drop means drying, not rain
+  # ...unless water ran off in one go: drying steps stay within 3 pF per 10 s,
+  # rain washing a full film off drops 6-34 pF at once.
+  ablauf_sprung: "5.0"   # pF in one 10-s step
+  # In night mode (no unrest) a rate below rate_ruhig counts as calm.
+  rate_ruhig: "10"       # pF/min
+  # No start from a smooth rise right after heating: the plate takes up humidity again as it cools.
+  start_sperre_s: "180"   # after heating (with Cs the cooling plate no longer rises, 11.11.)
+  # Stalled oscillator: heat at most this long per stall to dry the leak, then wait.
+  steht_heiz_max_s: "600"
+  # The running heater disturbs the oscillator: samples are dropped while it
+  # runs and for mess_sperre_s after; it then stays off at least mess_pause_s
+  # so a clean reading comes in.
+  mess_sperre_s: "12"
+  mess_pause_s: "25"
+  # Emergency stop for one pulse outside the drying run: normally the plate reaches
+  # the target first (~190 s from 0 C). Hitting it means wind, ice or a faulty NTC.
+  heiz_puls_max_s: "300"
+
+  # The heater runs down to this share of the heating threshold: fewer, longer pulses.
+  hyst_heizung: "0.85"
+  # Dew heating only below this plate temperature: dew above it does not disturb the
+  # detection, frost thaws into a closed film in the morning and stalls the oscillator.
+  frost_grenze: "1.0"
+  # Drying run after precipitation: waits this long after the end (showers often follow).
+  trocknung_warte_s: "900"
+  # Below these battery voltages no heating pulse starts; a running pulse finishes (the
+  # voltage sags ~0.25 V under load). Frost and stall heating matter more than drying.
+  akku_min_trocknung: "3.5"   # V, drying run
+  akku_min_heizung: "3.3"     # V, frost and stall
+  # A stall lasting this long reports "Stillstand" instead of the last weather state.
+  steht_meldung_s: "120"
+  # Night wake on an already wet plate: rain shows as a restless level, dew does not.
+  # A wake is restless when its samples spread this much or the level jumped since the
+  # last wake; two restless wakes in a row start rain.
+  nacht_streuung: "1.5"   # pF within one wake (dew 0.1-0.3)
+  nacht_auf: "6.0"        # pF rise since the last wake (dew and frost up to ~4, smooth)
+  nacht_ab: "3.0"         # pF drop since the last wake (water running off; dew never drops fast)
+
+  zeitzone: Europe/Berlin   # SNTP time zone
+
+  # Weather state texts; index stored across sleep (see on_boot).
+  wl_namen: '"trocken", "Regen", "Stillstand"'
+
+  # Night mode (deep sleep, RTC timer wake).
+  schlaf_intervall: 5min
+  schlaf_wachzeit: "35000"      # ms awake before sleeping
+
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+  # After a wake from night mode, report the last weather state at once
+  # instead of "unknown" until the first measurement.
+  on_boot:
+    priority: -100
+    then:
+      - lambda: |-
+          id(g_nachtwach) = esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_TIMER;
+          static const char *const N[] = {${wl_namen}};
+          int i = id(g_zustand);
+          if (i >= 0 && i < (int)(sizeof(N) / sizeof(N[0]))) id(wetterlage).publish_state(N[i]);
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+logger:
+
+# Deep sleep: no birth/will/shutdown message, so subscribers and HA keep the
+# last (retained) states instead of showing the device offline while asleep.
+mqtt:
+  broker: !secret mqtt_broker
+  username: !secret mqtt_username
+  password: !secret mqtt_password
+  birth_message:
+  will_message:
+  shutdown_message:
+  log_topic:
+
+# Local web page: states, settings and OTA upload; works without internet.
+web_server:
+  version: 3
+  local: true
+
+ota:
+  - platform: esphome
+    password: !secret regensensor_ota_password
+    on_begin:
+      then:
+        - deep_sleep.prevent: nachtschlaf
+  - platform: web_server
+    on_begin:
+      then:
+        - deep_sleep.prevent: nachtschlaf
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  power_save_mode: light
+  ap:
+    ssid: "${friendly_name} Fallback"
+    password: !secret wifi_ap_password   # at least 8 characters
+
+captive_portal:
+
+# Night window needs valid time; without it the device never sleeps.
+time:
+  - platform: sntp
+    id: uhr
+    timezone: ${zeitzone}
+
+# Sleep is triggered only by the interval at the bottom.
+deep_sleep:
+  id: nachtschlaf
+  sleep_duration: ${schlaf_intervall}
+
+i2c:
+  sda: ${pin_i2c_sda}
+  scl: ${pin_i2c_scl}
+  frequency: 100kHz
+
+# restore_value goes to NVS flash; synced every 15 min and before deep sleep.
+preferences:
+  flash_write_interval: 15min
+
+globals:
+  # Previous capacitance for the rate; persisted across sleep.
+  - id: c_vorher
+    type: float
+    restore_value: true
+    initial_value: 'NAN'
+
+  # Heater account in seconds: rises while heating, decays in pauses.
+  # Persisted, otherwise the limit cannot act across night-mode wakeups.
+  - id: g_heiz_sek
+    type: float
+    restore_value: true
+    initial_value: '0.0'
+
+  # Remaining lockout in seconds.
+  - id: g_sperre_sek
+    type: uint32_t
+    restore_value: true
+    initial_value: '0'
+
+  # Unix time of the last capacitance sample (millis() restarts after sleep).
+  - id: g_rate_stamp
+    type: uint32_t
+    restore_value: true
+    initial_value: '0'
+
+  # Precipitation latches (set by a fast rise, see the control loop), so dew
+  # is not reported as rain and the heater stays off while it rains.
+  - id: g_regen
+    type: bool
+    restore_value: true
+    initial_value: 'false'
+  # Plate was below frost_grenze and has not been dry since: ice or snow may be thawing.
+  - id: g_frost
+    type: bool
+    restore_value: true
+    initial_value: 'false'
+  # Drying run pending/running after precipitation ended.
+  - id: g_regen_ende
+    type: bool
+    restore_value: true
+    initial_value: 'false'
+  # Unix time since the level is steady (0 = rising).
+  - id: g_ruhig_seit
+    type: uint32_t
+    restore_value: true
+    initial_value: '0'
+  # Seconds since the end of precipitation (wait, then drying run); persisted across sleep.
+  - id: g_trocknen_sek
+    type: float
+    restore_value: true
+    initial_value: '0.0'
+
+  # Unix time of the last control-loop run (account and lockout use real time).
+  - id: g_konto_stamp
+    type: uint32_t
+    restore_value: true
+    initial_value: '0'
+
+  # Capacitance at or above the heating threshold (hysteresis hyst_heizung).
+  - id: g_feucht
+    type: bool
+    restore_value: true
+    initial_value: 'false'
+
+  # Last published weather state (index into wl_namen, -1 = none).
+  - id: g_zustand
+    type: int
+    restore_value: true
+    initial_value: '-1'
+
+  # millis() of the last second with the heater on (sample hold).
+  - id: g_aus_ms
+    type: uint32_t
+    initial_value: '0'
+  # millis() at heater switch-on (pulse limit).
+  - id: g_puls_ms
+    type: uint32_t
+    initial_value: '0'
+
+  # Unix time of the last loop run with the heater on (start lockout).
+  - id: g_heiz_ts
+    type: uint32_t
+    restore_value: true
+    initial_value: '0'
+
+  # Oscillator stalled (0 Hz or c at or above c_steht): leakage, not a reading.
+  - id: g_steht
+    type: bool
+    restore_value: true   # a night-mode wake must not reset the stall budget below
+    initial_value: 'false'
+  # Unix time the current stall began (0 = no clock at that moment).
+  - id: g_steht_seit
+    type: uint32_t
+    restore_value: true
+    initial_value: '0'
+  # Heating seconds during the current stall (persisted across night-mode sleep).
+  - id: g_steht_heiz
+    type: float
+    restore_value: true
+    initial_value: '0.0'
+
+  # Level change over the 5-min window (NAN = too few samples).
+  - id: g_pegel5
+    type: float
+    initial_value: 'NAN'
+  # Largest single drop between 10-s samples in the 5-min window (pF, positive).
+  - id: g_abfall5
+    type: float
+    initial_value: '0.0'
+  # RMS of 10-s steps over the last 2 min, largest step left out (rain start on a wet plate).
+  - id: g_spr_kurz
+    type: float
+    initial_value: 'NAN'
+
+  # Restless night wakes in a row, and whether the last (or current) wake was restless.
+  - id: g_nw_anzahl
+    type: int
+    restore_value: true
+    initial_value: '0'
+  - id: g_nw_unruhig
+    type: bool
+    restore_value: true
+    initial_value: 'false'
+  # Completed calm night wakes in a row (the night end needs two).
+  - id: g_nw_ruhig
+    type: int
+    restore_value: true
+    initial_value: '0'
+
+  # Woken from night-mode sleep: the only case where the rate replaces the missing unrest for the end.
+  - id: g_nachtwach
+    type: bool
+    initial_value: 'false'
+
+  # Last known "inside night window", fallback when the clock is missing.
+  - id: g_nacht
+    type: bool
+    restore_value: true
+    initial_value: 'false'
+
+
+# Runtime thresholds; initial_value applies only on the first boot. Tune them
+# to your setup.
+number:
+  # Dry frequency of your setup = 100 pF. Read "Frequenz" with a completely
+  # dry surface and enter the mean here. "Kapazität" stays NAN without it.
+  - platform: template
+    name: "Trockenfrequenz"
+    id: freq_referenz
+    unit_of_measurement: "Hz"
+    min_value: 1000
+    max_value: 300000
+    step: 1
+    initial_value: ${c_freq_referenz_start}
+    # A new reference shifts the capacitance in one step: restart the rate.
+    # set_action runs only on a user change, not on the restore at each boot.
+    set_action:
+      - lambda: 'id(c_vorher) = NAN;'
+    <<: &number_cfg
+      restore_value: true
+      optimistic: true
+      mode: box
+      entity_category: config
+
+  # VEML7700 sits behind a cover; this compensates for its attenuation.
+  # Factor = lux without cover / lux behind it, read right after each other.
+  - platform: template
+    name: "Helligkeitsfaktor VEML"
+    id: glasfaktor
+    unit_of_measurement: "x"
+    min_value: 1
+    max_value: 10
+    step: 0.1
+    initial_value: 1.0
+    <<: *number_cfg
+
+  # From here the automation heats ("Feucht" turns on), unless it rains or drizzles,
+  # and only while the plate is below frost_grenze (frost). Also the stall heating level.
+  - platform: template
+    name: "Tauheizung"
+    id: schwelle_feucht
+    unit_of_measurement: "pF"
+    min_value: 100
+    max_value: 1500
+    step: 10
+    initial_value: 200
+    <<: *number_cfg
+
+  # Near the dry 100 pF without a rise the plate is dry: trocken, no drying run.
+  # Above the evening film (~103-112 pF on Rev A).
+  - platform: template
+    name: "Trocken bis"
+    id: trocken_bis
+    unit_of_measurement: "pF"
+    min_value: 100
+    max_value: 200
+    step: 1
+    initial_value: 115
+    <<: *number_cfg
+
+  # A rise this fast starts precipitation; dew and a resting film rise far slower.
+  - platform: template
+    name: "Schwelle Niederschlagserkennung"
+    id: rate_anstieg
+    unit_of_measurement: "pF/min"
+    min_value: 1
+    max_value: 100
+    step: 1
+    initial_value: 4
+    <<: *number_cfg
+
+  # Steps from here start precipitation without a fast rise (rain on a wet plate).
+  # Dew 0-0.3, light rain on a wet plate 0.7-1.8.
+  - platform: template
+    name: "Sprünge Regenbeginn"
+    id: spruenge_start
+    unit_of_measurement: "pF"
+    min_value: 0.2
+    max_value: 5
+    step: 0.1
+    initial_value: 0.7
+    <<: *number_cfg
+
+  # Drying run after precipitation: heats through for this long, then done.
+  - platform: template
+    name: "Trocknung nach Regenende"
+    id: trocknung_min
+    unit_of_measurement: "min"
+    min_value: 1
+    max_value: 15
+    step: 1
+    initial_value: 6
+    <<: *number_cfg
+
+  # Rain ends after this long calm.
+  - platform: template
+    name: "Schwelle für Regenende"
+    id: regenende_min
+    unit_of_measurement: "min"
+    min_value: 1
+    max_value: 60
+    step: 1
+    initial_value: 3
+    <<: *number_cfg
+
+  # Heating limit against continuous fog/drizzle.
+  - platform: template
+    name: "Max. Heizdauer"
+    id: max_heizdauer
+    unit_of_measurement: "min"
+    min_value: 5
+    max_value: 30
+    step: 1
+    initial_value: 15
+    <<: *number_cfg
+
+  # Night window in half hours (22.5 = 22:30), may span midnight. Equal values = never sleep.
+  - platform: template
+    name: "Nachtmodus von"
+    id: schlaf_von
+    unit_of_measurement: "Uhr"
+    min_value: 0
+    max_value: 23.5
+    step: 0.5
+    initial_value: 22
+    <<: *number_cfg
+
+  - platform: template
+    name: "Nachtmodus bis"
+    id: schlaf_bis
+    unit_of_measurement: "Uhr"
+    min_value: 0
+    max_value: 23.5
+    step: 0.5
+    initial_value: 5
+    <<: *number_cfg
+
+  # Saturday and Sunday morning: wake at this time instead of "Nachtmodus bis".
+  - platform: template
+    name: "Nachtmodus bis (Wochenende)"
+    id: schlaf_bis_we
+    unit_of_measurement: "Uhr"
+    min_value: 0
+    max_value: 23.5
+    step: 0.5
+    initial_value: 6
+    <<: *number_cfg
+
+  # Pause minutes per heating minute: duty limit 1/(1+x), 6 -> 14 %.
+  - platform: template
+    name: "Pause je Heizminute"
+    id: erholung
+    unit_of_measurement: "min"
+    min_value: 1
+    max_value: 20
+    step: 1
+    initial_value: 6
+    <<: *number_cfg
+
+  # Target surface temperature: the heater switches off here, on again temp_hyst below.
+  - platform: template
+    name: "Heiztemperatur"
+    id: heiz_ziel
+    unit_of_measurement: "°C"
+    min_value: 30
+    max_value: ${temp_max}
+    step: 1
+    initial_value: 45
+    <<: *number_cfg
+
+  - platform: template
+    name: "Heizsperre"
+    id: abklingzeit
+    unit_of_measurement: "min"
+    min_value: 30
+    max_value: 1440
+    step: 30
+    initial_value: 120
+    <<: *number_cfg
+
+  # Fine trim of the surface temperature (coarse: adc_faktor). Calibrate
+  # against air temperature in the daytime: at night the plate is colder.
+  - platform: template
+    name: "Temperatur-Offset (NTC)"
+    id: ntc_offset
+    unit_of_measurement: "K"
+    min_value: -5
+    max_value: 5
+    step: 0.1
+    initial_value: 0
+    <<: *number_cfg
+
+
+sensor:
+  # I2C sensors at 8 s so they report within the 35 s night-mode wake time.
+  - platform: veml7700
+    address: 0x10
+    update_interval: 8s
+    ambient_light:
+      name: "Helligkeit"
+      id: helligkeit
+      accuracy_decimals: 1
+      filters:
+        - lambda: 'return x * id(glasfaktor).state;'
+
+  # Rough lux -> W/m2 for daylight; not used by the classification.
+  - platform: copy
+    source_id: helligkeit
+    name: "Sonneneinstrahlung"
+    unit_of_measurement: "W/m²"
+    device_class: irradiance
+    state_class: measurement
+    accuracy_decimals: 0
+    filters:
+      - multiply: 0.01
+
+  # HTU21D inside the enclosure: battery climate (no charging below 0 °C)
+  # and desiccant check.
+  - platform: htu21d
+    address: 0x40
+    update_interval: 8s
+    temperature:
+      name: "Box Temperatur"
+      entity_category: diagnostic
+      accuracy_decimals: 1
+    humidity:
+      name: "Box Luftfeuchte"
+      entity_category: diagnostic
+      accuracy_decimals: 1
+
+  # NTC chain: ADC -> resistance -> temperature.
+  - platform: adc
+    pin: ${pin_ntc}
+    id: ntc_adc
+    attenuation: 12db
+    update_interval: 1s
+    internal: true
+    samples: 16
+    filters:
+      - multiply: ${adc_faktor}
+      - median:
+          window_size: 3
+          send_every: 1
+      # ~3 s time constant: display lags ~1 K while heating.
+      - exponential_moving_average:
+          alpha: 0.3
+          send_every: 1
+
+  # Battery voltage (Waveshare Solar Power Manager D) on J1 BAT.
+  - platform: adc
+    id: batterie
+    pin: ${pin_batt_adc}
+    attenuation: 12db
+    update_interval: 30s
+    samples: 16
+    filters:
+      - multiply: ${batt_teiler_faktor}
+      - exponential_moving_average:
+          alpha: 0.2
+          send_every: 1
+    name: "Batteriespannung"
+    unit_of_measurement: "V"
+    device_class: voltage
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+
+  - platform: resistance
+    sensor: ntc_adc
+    id: ntc_widerstand
+    internal: true
+    configuration: DOWNSTREAM
+    resistor: ${r_pullup}Ohm
+    reference_voltage: 3.3V
+    filters:
+      - lambda: |-
+          if (x < ${ntc_r_min} || x > ${ntc_r_max}) return NAN;
+          return x;
+
+  # Diagnostics: every 30 s instead of every second (WiFi airtime, recorder).
+  - platform: copy
+    source_id: ntc_widerstand
+    name: "NTC Widerstand"
+    unit_of_measurement: "Ω"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    filters:
+      - throttle: 30s
+
+  # Fast, internal: drives the heater cut-off every second.
+  - platform: ntc
+    sensor: ntc_widerstand
+    id: sensor_temperatur
+    internal: true
+    calibration:
+      - 3572Ohm -> -5°C
+      - 1000Ohm -> 25°C
+      - 290Ohm -> 60°C
+    filters:
+      - lambda: |-
+          float o = id(ntc_offset).state;
+          return isnan(o) ? x : x + o;
+
+  # Smoothed copy for display (15 s mean, new value every 5 s).
+  - platform: copy
+    source_id: sensor_temperatur
+    name: "Oberflächentemperatur"
+    accuracy_decimals: 1
+    filters:
+      - sliding_window_moving_average:
+          window_size: 15
+          send_every: 5
+          send_first_at: 5
+
+  # Oscillator frequency. Capacitance and rate are computed here so that the
+  # rate uses the true sample spacing.
+  - platform: pulse_counter
+    pin: ${gpio_c_freq}
+    name: "Frequenz"
+    entity_category: diagnostic
+    unit_of_measurement: "Hz"
+    state_class: measurement
+    accuracy_decimals: 1
+    update_interval: 2s
+    internal_filter: 1us   # half period at 148 kHz dry is 3.4 us; default 13 us cuts off near 38 kHz
+    filters:
+      - multiply: 0.0166667    # pulses/min -> Hz
+      # Median over 5 windows against single bad windows.
+      - median:
+          window_size: 5
+    on_value:
+      - lambda: |-
+          // 5-min buffer for unrest and steps.
+          static float    u_v[40];
+          static uint32_t u_t[40];
+          static int      u_n = 0;
+          // Heater on or just off: keep the last reading. The drying step must not count as unrest.
+          if (id(heizung).state || (id(g_aus_ms) != 0 && millis() - id(g_aus_ms) < ${mess_sperre_s} * 1000UL)) {
+            u_n = 0;
+            return;
+          }
+          // Stalled or sputtering oscillator: a water film on face A shorts it, not a reading.
+          // No rate, so the latches cannot fire on it.
+          float c_pf;
+          float fref = id(freq_referenz).state;
+          if (isnan(x) || x <= 0.0f) {
+            c_pf = ${c_steht};
+          } else if (isnan(fref) || fref <= 0.0f) {
+            c_pf = NAN;   // not calibrated
+          } else {
+            c_pf = fref * 100.0f / x;
+          }
+          bool steht = c_pf >= ${c_steht};
+          auto jetzt = id(uhr).now();
+          if (steht != id(g_steht)) {
+            ESP_LOGW("kapazitaet", "%s", steht ? "Oscillator stalled" : "Oscillator running again");
+            if (steht) id(g_steht_seit) = jetzt.is_valid() ? jetzt.timestamp : 0;
+          }
+          id(g_steht) = steht;
+          if (steht) c_pf = ${c_steht};
+          id(kapazitaet).publish_state(c_pf);
+
+          float rate = NAN;
+          bool rate_neu = true;
+          // While stalled keep the last good sample as the rate base.
+          if (!steht && jetzt.is_valid()) {
+            uint32_t t  = jetzt.timestamp;
+            float    v  = id(c_vorher);
+            uint32_t t0 = id(g_rate_stamp);
+            // Night wake: only the step across the sleep gap counts. The 10-s steps
+            // after it pass the 1-min mean unsmoothed (±0.5 pF = ±3 pF/min). After the
+            // first minute awake the mean is full again.
+            bool wach_kurz = id(g_nachtwach) && millis() < 60000;
+            // Seconds since the last rate sample; 0 = none, or too long ago for a trend
+            // (missed cycles, long sleep).
+            uint32_t dts = (!isnan(v) && t0 != 0 && t > t0 && t - t0 <= 900) ? t - t0 : 0;
+            rate_neu = !(wach_kurz && t0 != 0 && t > t0 && t - t0 < 60);
+            if (rate_neu) {
+              id(c_vorher)     = c_pf;
+              id(g_rate_stamp) = t;
+              if (dts != 0) rate = (c_pf - v) * 60.0f / dts;
+            }
+            // Night wake: restless level (spread within the wake, step across the gap).
+            if (wach_kurz && !isnan(c_pf)) {
+              static bool erste = true, gezaehlt = false;
+              static float c_min = NAN, c_max = NAN;
+              float sprung = 0.0f;   // level change since the last wake
+              if (erste) {
+                erste = false;
+                if (!id(g_nw_unruhig)) { id(g_nw_anzahl) = 0; id(g_nw_ruhig)++; }   // last wake calm
+                else id(g_nw_ruhig) = 0;
+                id(g_nw_unruhig) = false;
+                if (dts != 0) sprung = c_pf - v;
+              }
+              c_min = isnan(c_min) ? c_pf : fminf(c_min, c_pf);
+              c_max = isnan(c_max) ? c_pf : fmaxf(c_max, c_pf);
+              if (!gezaehlt && (sprung >= ${nacht_auf} || sprung <= -${nacht_ab} || c_max - c_min >= ${nacht_streuung})) {
+                gezaehlt = true;
+                id(g_nw_unruhig) = true;
+                id(g_nw_anzahl)++;
+                ESP_LOGI("kapazitaet", "Restless night wake %d (step %.1f, spread %.1f pF)",
+                         id(g_nw_anzahl), sprung, c_max - c_min);
+              }
+            }
+          }
+          if (rate_neu) id(kapazitaet_rate).publish_state(rate);
+
+          // Unrest (standard deviation over 5 min) and steps (RMS of the 10-s steps over 2 min
+          // without the largest one). Rain makes the level jump, dew and a resting film do not.
+          // Too few samples (heater, sleep): none.
+          float unruhe = NAN;
+          id(g_pegel5) = NAN; id(g_abfall5) = 0.0f; id(g_spr_kurz) = NAN;
+          if (!steht && !isnan(c_pf) && jetzt.is_valid()) {
+            uint32_t t = jetzt.timestamp;
+            if (u_n == 40) {
+              for (int i = 1; i < 40; i++) { u_v[i - 1] = u_v[i]; u_t[i - 1] = u_t[i]; }
+              u_n = 39;
+            }
+            u_v[u_n] = c_pf; u_t[u_n] = t; u_n++;
+            int n = 0, k = 0, i0 = -1; float s = 0, q = 0, k2 = 0, kmax = 0, dmin = 0;
+            for (int i = 0; i < u_n; i++) {
+              if (t - u_t[i] > 300) continue;
+              if (i0 < 0) i0 = i;
+              s += u_v[i]; q += u_v[i] * u_v[i]; n++;
+              if (i > 0 && u_t[i] - u_t[i - 1] <= 15) {
+                float d = u_v[i] - u_v[i - 1];
+                if (d < dmin) dmin = d;
+                if (t - u_t[i] <= 120) { k2 += d * d; k++; kmax = fmaxf(kmax, d * d); }
+              }
+            }
+            if (n >= 24) unruhe = sqrtf(fmaxf(q / n - (s / n) * (s / n), 0.0f));
+            // Without the largest step: one lone jump (frost, a drop sliding off) is not rain.
+            id(g_spr_kurz) = k >= 6 ? sqrtf((k2 - kmax) / k) : NAN;
+            id(g_pegel5) = n >= 24 ? c_pf - u_v[i0] : NAN;
+            id(g_abfall5) = -dmin;
+          }
+          id(kapazitaet_unruhe).publish_state(unruhe);
+          id(kapazitaet_spruenge).publish_state(id(g_spr_kurz));
+
+  - platform: template
+    name: "Kapazität"
+    entity_category: diagnostic
+    id: kapazitaet
+    unit_of_measurement: "pF"
+    state_class: measurement
+    accuracy_decimals: 0
+    update_interval: never
+
+  # Wetting in percent for display, points from RC-SPC1KA datasheet table 1.
+  - platform: copy
+    source_id: kapazitaet
+    name: "Benetzung"
+    icon: mdi:water-percent
+    unit_of_measurement: "%"
+    state_class: measurement
+    accuracy_decimals: 0
+    filters:
+      - calibrate_linear:
+          method: exact
+          datapoints:
+            - 100 -> 0     # dry
+            - 320 -> 25
+            - 450 -> 40
+            - 2000 -> 50
+            - 3000 -> 100
+      - clamp:
+          min_value: 0
+          max_value: 100
+
+  # Unrest (SD over 5 min) and steps (RMS of 10-s steps over 2 min, largest left out); published by the frequency on_value.
+  - platform: template
+    name: "Kapazität Unruhe"
+    entity_category: diagnostic
+    id: kapazitaet_unruhe
+    unit_of_measurement: "pF"
+    state_class: measurement
+    accuracy_decimals: 1
+    update_interval: never
+  - platform: template
+    name: "Kapazität Sprünge"
+    entity_category: diagnostic
+    id: kapazitaet_spruenge
+    unit_of_measurement: "pF"
+    state_class: measurement
+    accuracy_decimals: 1
+    update_interval: never
+
+  # Rate in pF/min from real time; published by the frequency on_value.
+  - platform: template
+    name: "Kapazität Änderungsrate"
+    entity_category: diagnostic
+    id: kapazitaet_rate
+    unit_of_measurement: "pF/min"
+    state_class: measurement
+    accuracy_decimals: 0
+    update_interval: never
+    filters:
+      # One raw value per 10 s; 1 min mean.
+      - sliding_window_moving_average:
+          window_size: 6
+          send_every: 1
+
+  - platform: template
+    name: "Heizkonto"
+    unit_of_measurement: "min"
+    state_class: measurement
+    accuracy_decimals: 1
+    update_interval: 30s
+    entity_category: diagnostic
+    lambda: 'return id(g_heiz_sek) / 60.0f;'
+
+  - platform: template
+    name: "Sperre verbleibend"
+    unit_of_measurement: "min"
+    state_class: measurement
+    accuracy_decimals: 0
+    update_interval: 30s
+    entity_category: diagnostic
+    lambda: 'return id(g_sperre_sek) / 60.0f;'
+
+  - platform: wifi_signal
+    name: "WLAN Signal"
+    entity_category: diagnostic
+    update_interval: 120s
+
+  - platform: uptime
+    name: "Laufzeit"
+    entity_category: diagnostic
+
+
+binary_sensor:
+  - platform: template
+    name: "Feucht"
+    device_class: moisture
+    entity_category: diagnostic
+    lambda: |-
+      if (isnan(id(kapazitaet).state) || isnan(id(schwelle_feucht).state)) return {};
+      return id(g_feucht);
+
+  # Follows the rain latch, not the raw threshold: heavy dew reaches the same
+  # capacitance as rain.
+  - platform: template
+    name: "Regen"
+    device_class: moisture
+    lambda: 'return id(g_regen) && id(wetterlage).state != "Stillstand";'
+
+  - platform: template
+    name: "Frostsperre"
+    icon: mdi:snowflake-alert
+    entity_category: diagnostic
+    lambda: 'return id(g_frost);'
+
+  - platform: template
+    name: "Heizsperre aktiv"
+    device_class: problem
+    lambda: 'return id(g_sperre_sek) > 0;'
+
+  - platform: template
+    name: "Oszillator steht"
+    device_class: problem
+    entity_category: diagnostic
+    lambda: 'return id(g_steht);'
+
+
+switch:
+  # Boost enable + heater MOSFET. ALWAYS_OFF: a crash while heating must not
+  # end in a permanently running heater.
+  - platform: gpio
+    pin: ${pin_heizung}
+    id: heizung
+    name: "Heizung"
+    icon: mdi:radiator
+    restore_mode: ALWAYS_OFF
+    on_turn_on:
+      - lambda: 'id(g_puls_ms) = millis();'
+
+  # Drying run after precipitation on/off (off: the plate dries by itself).
+  - platform: template
+    name: "Trocknungslauf"
+    id: trocknung_frei
+    icon: mdi:heat-wave
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_ON
+    entity_category: config
+
+  # Allows night mode; off keeps the device awake and reachable (e.g. for OTA).
+  # Off by default: enable only when the supply does not cut out at low load.
+  - platform: template
+    name: "Nachtmodus"
+    id: nachtschlaf_frei
+    icon: mdi:sleep
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+    entity_category: config
+
+  # Master switch for heating automation and night mode. Defaults to ON
+  # (a forgotten OFF is the costlier error); not ALWAYS_ON, so a deliberate
+  # OFF survives deep-sleep wakeups.
+  - platform: template
+    name: "Automatikbetrieb"
+    id: automatikbetrieb
+    icon: mdi:auto-mode
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_ON
+    # Turning it on clears a running lockout. Not on the restore at boot, or
+    # every night-mode wake would clear the heater account.
+    on_turn_on:
+      - lambda: |-
+          if (millis() < 10000) return;
+          id(g_heiz_sek) = 0.0f;
+          id(g_sperre_sek) = 0;
+
+
+text_sensor:
+  # Weather state from the precipitation latches (see the control loop):
+  #   trocken   no precipitation (dew and fog included)
+  #   Regen     precipitation (rain or drizzle)
+  #   Stillstand  oscillator stalled for steht_meldung_s: no reading (latches kept)
+  - platform: template
+    name: "Wetterlage"
+    id: wetterlage
+    icon: mdi:weather-partly-rainy
+    update_interval: 15s
+    on_value:
+      - lambda: |-
+          static const char *const N[] = {${wl_namen}};
+          for (int i = 0; i < (int)(sizeof(N) / sizeof(N[0])); i++)
+            if (x == N[i]) id(g_zustand) = i;
+    lambda: |-
+      // No value yet (boot, wake from night mode): keep the last state.
+      if (isnan(id(kapazitaet).state)) return {};
+      // Stalled: keep the last state for a short stall, then say so (no reading, no rain call).
+      if (id(g_steht)) {
+        auto jz = id(uhr).now();
+        uint32_t seit = id(g_steht_seit);
+        if (jz.is_valid() && seit != 0 && jz.timestamp - seit >= ${steht_meldung_s}) return {"Stillstand"};
+        return {};
+      }
+      // Latches are kept by the control loop, only read here.
+      if (id(g_regen)) return {"Regen"};
+      return {"trocken"};
+
+  - platform: version
+    name: "ESPHome Version"
+    entity_category: diagnostic
+    disabled_by_default: true
+
+
+# Control loop every second (the heater raises the surface ~0.7 K/s).
+# Order: 0a precipitation, 0b elapsed time and drying run, 1 safety cut-off,
+# 2 manual mode, 3 wet state, 4 heating limit, 5 switch.
+interval:
+  - interval: 1s
+    then:
+      - lambda: |-
+          float t  = id(sensor_temperatur).state;
+          bool  heiz_an = id(heizung).state;
+          float c  = id(kapazitaet).state;
+          auto  jz = id(uhr).now();
+          if (heiz_an && jz.is_valid()) id(g_heiz_ts) = jz.timestamp;
+          if (heiz_an) id(g_aus_ms) = millis();
+          uint32_t h = id(g_heiz_ts);
+          bool frisch = heiz_an || (h != 0 && jz.is_valid() && jz.timestamp - h < ${start_sperre_s});
+
+          // 0a) Precipitation. Level alone cannot separate rain from dew or fog.
+          //   Start:   a fast rise >= "Schwelle Niederschlagserkennung" (dew rises far slower) or,
+          //            on a wet plate, steps >= "Sprünge Regenbeginn"; not right after heating.
+          //   End:     calm (unrest below unruhe_ruhig; in night mode a rate below
+          //            rate_ruhig) for "Schwelle für Regenende"; then one drying run.
+          //   Dry:     below "Trocken bis" without a rise, always trocken.
+          //   Frost:   no rain from below frost_grenze until the plate is above it and dry
+          //            again: thaw water from frost or snow looks like rain (14.11.: 8-10 C in the sun).
+          // Without unrest after a boot or heating (not a night wake) the end waits.
+          // Runs first so it also runs in manual mode. Frozen while stalled.
+          if (!isnan(t)) {
+            if (t < ${frost_grenze}) id(g_frost) = true;
+            else if (!isnan(c) && c < id(trocken_bis).state) id(g_frost) = false;
+          }
+          if (!isnan(c) && !id(g_steht)) {
+            float rr = id(kapazitaet_rate).state;
+            float rn = id(rate_anstieg).state;
+            float un = id(kapazitaet_unruhe).state;
+            bool steigt = !isnan(rr) && !isnan(rn) && rr >= rn;
+            // Wet plate: steps over the last 2 min, unless the plate dries (level sinks
+            // without any large drop). 2 min, so the end (3 min calm) cannot restart it.
+            float ss = id(spruenge_start).state, pg = id(g_pegel5), sk = id(g_spr_kurz);
+            bool trocknet = !isnan(pg) && pg < -${pegel_fall} && id(g_abfall5) < ${ablauf_sprung};
+            bool unruhig_start = !isnan(sk) && !isnan(ss) && sk >= ss && !trocknet;
+
+            // Night, plate already wet: no fast rise, but a restless level over two wakes.
+            // Short night wake (35 s, longer only while heating); g_nachtwach alone stays set
+            // all day after the morning wake.
+            bool nachtphase = id(g_nachtwach) && millis() < 600000;
+            bool nacht_unruhig = nachtphase && id(g_nw_unruhig);
+
+            bool vorher = id(g_regen);
+            // Not right after heating (start_sperre_s).
+            if (!vorher && (steigt || unruhig_start || (nacht_unruhig && id(g_nw_anzahl) >= 2)) && !frisch) {
+              id(g_regen) = true;
+              id(g_regen_ende) = false;
+            }
+
+            if (id(g_frost)) id(g_regen) = false;
+
+            // Back near the dry 100 pF, calm and without a rise: dry, drying not needed.
+            float tb = id(trocken_bis).state;
+            if (!isnan(tb) && c < tb && !steigt && !(un >= ${unruhe_ruhig}) && !nacht_unruhig) { id(g_regen) = false; id(g_regen_ende) = false; }
+
+            // A new precipitation starts a new calm period.
+            if (!vorher && id(g_regen)) id(g_ruhig_seit) = 0;
+
+            // Calm (needs the clock, works across night-mode sleep).
+            bool halten = isnan(un) && !nachtphase;
+            if (halten) id(g_ruhig_seit) = 0;
+            else if ((!isnan(un) || !isnan(rr)) && jz.is_valid()) {
+              uint32_t seit = id(g_ruhig_seit);
+              float ende = id(regenende_min).state;
+              // Night: calm only after two completed calm wakes (light rain skips a wake now and then).
+              bool unruhig = !isnan(un) ? un >= ${unruhe_ruhig}
+                                        : (rr >= ${rate_ruhig} || nacht_unruhig || (nachtphase && id(g_nw_ruhig) < 2));
+              if (unruhig) {
+                id(g_ruhig_seit) = 0;
+              } else if (seit == 0 || jz.timestamp < seit) {
+                id(g_ruhig_seit) = jz.timestamp;
+              } else if (!isnan(ende) && jz.timestamp - seit >= (uint32_t)(ende * 60.0f)) {
+                if (id(g_regen)) { id(g_regen_ende) = true; id(g_trocknen_sek) = 0.0f; }
+                id(g_regen) = false;
+              }
+            }
+          }
+          // Heating threshold with hysteresis (also "Feucht"); before any early return.
+          float sfh = id(schwelle_feucht).state;
+          if (!isnan(c) && !isnan(sfh))
+            id(g_feucht) = id(g_feucht) ? c >= sfh * ${hyst_heizung} : c >= sfh;
+
+          // 0b) Elapsed time. Account and lockout run in real time: in night
+          // mode this loop stalls (35 s awake per 5 min). Without a clock
+          // it falls back to one second per run.
+          float dt = 1.0f;
+          if (jz.is_valid()) {
+            uint32_t nun = jz.timestamp;
+            uint32_t alt = id(g_konto_stamp);
+            if (alt != 0 && nun >= alt) {
+              // May be 0 (two runs in the same second); cap time jumps.
+              dt = (float)(nun - alt);
+              if (dt > 3600.0f) dt = 3600.0f;
+            }
+            id(g_konto_stamp) = nun;
+          }
+
+          // Heater account: up while heating, decays in pauses.
+          float erh_min = id(erholung).state;
+          if (isnan(erh_min) || erh_min < 1.0f) erh_min = 1.0f;
+          // A clock jump (boot, sleep) is no heating time: count at most a few seconds per run.
+          float dt_heiz = fminf(dt, 5.0f);
+          if (heiz_an) id(g_heiz_sek) += dt_heiz;
+          else         id(g_heiz_sek) -= dt / erh_min;
+          if (id(g_heiz_sek) < 0.0f) id(g_heiz_sek) = 0.0f;
+          // Leak episode: stalled, or running again but still above the heating
+          // level (a sputtering oscillator must not restart the stall budget).
+          // Ends only on a reading after the plate has cooled: heat dries the leak for a moment.
+          bool leck = id(g_steht) || id(g_steht_heiz) > 0.0f;
+          if (!id(g_steht) && !id(g_feucht) && !frisch) id(g_steht_heiz) = 0.0f;
+          else if (heiz_an && leck) id(g_steht_heiz) += dt_heiz;
+
+          if (id(g_sperre_sek) > 0 && dt >= 1.0f) {
+            uint32_t ab = (uint32_t) dt;
+            if (id(g_sperre_sek) > ab) {
+              id(g_sperre_sek) -= ab;
+            } else {
+              id(g_sperre_sek) = 0;
+              id(g_heiz_sek)   = 0.0f;
+            }
+          }
+
+          // Drying run after precipitation: wait trocknung_warte_s, then one block of
+          // "Trocknung nach Regenende" minutes, then done. New precipitation cancels it (0a).
+          if (id(g_regen_ende)) {
+            id(g_trocknen_sek) += dt;
+            float tr = id(trocknung_min).state;
+            if (isnan(tr) || !id(trocknung_frei).state || id(g_trocknen_sek) >= ${trocknung_warte_s} + tr * 60.0f)
+              id(g_regen_ende) = false;
+          }
+
+          // 1) Safety, always (also manual). NaN includes an implausible
+          // resistance, i.e. a wiring fault.
+          float t_aus = id(heiz_ziel).state;
+          if (isnan(t_aus)) t_aus = 45.0f;
+          t_aus = fminf(t_aus, ${temp_max});
+          if (isnan(t) || t >= t_aus) {
+            if (heiz_an) id(heizung).turn_off();
+            return;
+          }
+
+          // 2) Manual mode: no further intervention (also skips the heating
+          // limit; the temperature cut-off above still applies).
+          if (!id(automatikbetrieb).state) {
+            id(g_regen_ende) = false;
+            return;
+          }
+
+          // 3) Heat when wet, never during precipitation (the sensor has to
+          // see it, and the heater cannot keep up with rain). Dew heating only
+          // below frost_grenze; a running pulse finishes. After precipitation one drying run.
+          if (isnan(c) || isnan(sfh)) {
+            if (heiz_an) id(heizung).turn_off();
+            return;
+          }
+          bool trocknen = id(g_regen_ende) && !id(g_regen)
+                          && id(g_trocknen_sek) >= ${trocknung_warte_s};
+          // Leak: one drying attempt of steht_heiz_max_s, then wait (battery).
+          bool frost = heiz_an || t < ${frost_grenze};
+          bool soll = trocknen || (id(g_feucht) && (leck ? id(g_steht_heiz) < ${steht_heiz_max_s}
+                                                         : (!id(g_regen) && frost)));
+
+          // 4) Heating limit: in fog the surface gets wet faster than it
+          // dries. Exceeding the maximum triggers a fixed pause.
+          float maxd = id(max_heizdauer).state;
+          float abkl_min = id(abklingzeit).state;
+          if (!isnan(maxd) && !isnan(abkl_min) &&
+              id(g_sperre_sek) == 0 && id(g_heiz_sek) >= maxd * 60.0f) {
+            id(g_sperre_sek) = (uint32_t)(abkl_min * 60.0f);
+          }
+          if (id(g_sperre_sek) > 0) {
+            if (heiz_an) id(heizung).turn_off();
+            id(g_regen_ende) = false;   // no drying during the lockout
+            return;
+          }
+
+          // 5) Switch on change. Temperature hysteresis: after the cut-off,
+          // switch on again only at or below target - temp_hyst; switching off is never
+          // delayed. Outside the drying run pulses are capped and followed by a
+          // pause of mess_pause_s for a clean reading; the drying run heats through.
+          if (!trocknen && heiz_an && millis() - id(g_puls_ms) >= ${heiz_puls_max_s} * 1000UL) {
+            ESP_LOGW("heizung", "Pulse limit reached at %.1f C (target %.0f C)", t, t_aus);
+            soll = false;
+          }
+          float ub = id(batterie).state;
+          if (soll && !heiz_an && !isnan(ub) && ub < (trocknen ? ${akku_min_trocknung} : ${akku_min_heizung})) return;   // battery low
+          if (soll && !heiz_an && (t > t_aus - ${temp_hyst} ||
+              (!trocknen && id(g_aus_ms) != 0 && millis() - id(g_aus_ms) < ${mess_pause_s} * 1000UL))) return;
+          if (soll != heiz_an) {
+            if (soll) id(heizung).turn_on();
+            else      id(heizung).turn_off();
+          }
+
+  # Night mode. Sleep only if all conditions hold; otherwise stay awake
+  # (a sleeping device is unreachable and does not measure).
+  - interval: 5s
+    then:
+      - if:
+          condition:
+            and:
+              - switch.is_on: automatikbetrieb
+              - switch.is_on: nachtschlaf_frei
+              - switch.is_off: heizung
+              # Sleep through the wait before a drying run, not through the run itself.
+              - lambda: 'return !id(g_regen_ende) || id(g_trocknen_sek) < ${trocknung_warte_s};'
+              # Minimum wake time: first capacitance cycle and OTA window.
+              - lambda: 'return millis() > ${schlaf_wachzeit};'
+              - lambda: |-
+                  float fvon = id(schlaf_von).state;
+                  float fbis = id(schlaf_bis).state;
+                  auto jetzt = id(uhr).now();
+                  // day_of_week: 1 = Sunday, 7 = Saturday.
+                  float fwe = id(schlaf_bis_we).state;
+                  if (jetzt.is_valid() && (jetzt.day_of_week == 1 || jetzt.day_of_week == 7) && !isnan(fwe))
+                    fbis = fwe;
+                  if (isnan(fvon) || isnan(fbis)) return false;
+                  int von = (int) roundf(fvon * 2);
+                  int bis = (int) roundf(fbis * 2);
+                  if (von == bis) return false;            // empty window
+
+                  if (jetzt.is_valid()) {
+                    int h = jetzt.hour * 2 + (jetzt.minute >= 30 ? 1 : 0);
+                    bool drin = (von < bis) ? (h >= von && h < bis)
+                                            : ((h >= von) || (h < bis));
+                    id(g_nacht) = drin;
+                    return drin;
+                  }
+
+                  // No valid clock (time comes via SNTP, so it fails with
+                  // WiFi): after 2 min use the last known state, otherwise
+                  // the device would stay awake all night and drain the
+                  // battery.
+                  return id(g_nacht) && millis() > 120000;
+          then:
+            - logger.log: "Night window, going to sleep"
+            - deep_sleep.enter: nachtschlaf

@@ -1,0 +1,39 @@
+name: Firmware
+on:
+  push:
+    paths: ["firmware/**", ".github/workflows/firmware.yml"]
+  pull_request:
+    paths: ["firmware/**"]
+  workflow_dispatch:
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        file: [regensensor_de.yaml, regensensor_en.yaml, regensensor_mqtt_de.yaml, regensensor_mqtt_en.yaml]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install esphome==2026.10.2
+      - name: Dummy secrets
+        working-directory: firmware
+        run: |
+          key=$(openssl rand -base64 32)
+          cat > secrets.yaml <<YAML
+          wifi_ssid: "ci"
+          wifi_password: "ci-password"
+          wifi_ap_password: "ci-password"
+          regensensor_api_key: "$key"
+          rain_sensor_api_key: "$key"
+          regensensor_ota_password: "ci"
+          rain_sensor_ota_password: "ci"
+          mqtt_broker: "192.0.2.1"
+          mqtt_username: "ci"
+          mqtt_password: "ci"
+          YAML
+      - name: esphome config
+        working-directory: firmware
+        run: esphome config ${{ matrix.file }} > /dev/null
