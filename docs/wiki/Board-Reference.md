@@ -17,7 +17,7 @@ This page describes the carrier board **Rev B**, the version in `hardware/` and 
 
 The D1 mini and the XL6009 module are the tallest parts. Measure your stack of socket, module and plugged cables before you size an enclosure, and leave about 3 mm below the board for the through-hole solder joints (e.g. 3–5 mm standoffs). The screw terminals sit along the bottom edge, so plan room for the cables there. Keep metal and enclosure walls away from the antenna, except an optional reflector: a metal plate at least 2 cm (ideally 3 cm) behind the antenna, on the side facing away from the access point, strengthens the signal towards it. JLCPCB adds edge rails for assembly and breaks them off afterwards; small residues can remain at the edges, so allow about 0.5 mm clearance around the board.
 
-[`mechanical/board-outline.dxf`](../../mechanical/board-outline.dxf) holds the outline, the holes, the antenna area and the connector and module positions for import into CAD (mm, origin at the bottom-left corner, top view; one layer each: OUTLINE, HOLES, ANTENNA, CONNECTORS).
+[`3d-files/board-outline.dxf`](../../3d-files/board-outline.dxf) holds the outline, the holes, the antenna area and the connector and module positions for import into CAD (mm, origin at the bottom-left corner, top view; one layer each: OUTLINE, HOLES, ANTENNA, CONNECTORS).
 
 ## Overview
 

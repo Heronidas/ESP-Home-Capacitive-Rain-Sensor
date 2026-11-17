@@ -1,6 +1,6 @@
 # Sensor holder
 
-Three parts in `mechanical/`:
+Three parts in `3d-files/`:
 
 | File | Part | Size (mm) |
 |---|---|---|

@@ -1,7 +1,7 @@
 # Licensing
 
 - Firmware and tools (`firmware/`, `tools/`): GNU General Public License v3.0 or later (GPL-3.0-or-later). Free to use, modify and share, including commercially; modified versions you distribute must stay under the GPL with source available. Full text: `LICENSES/GPL-3.0.txt`.
-- Hardware and documentation (`hardware/`, `fabrication/`, `mechanical/`, `docs/`, `README.md`): Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0). Full text: `LICENSES/CC-BY-NC-SA-4.0.txt`.
+- Hardware and documentation (`hardware/`, `fabrication/`, `3d-files/`, `docs/`, `README.md`): Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0). Full text: `LICENSES/CC-BY-NC-SA-4.0.txt`.
 
 The hardware is free for private and other non-commercial use. Commercial use of the hardware (selling boards, kits, assembled sensors, or products based on this design) needs written permission from the author. Commercial licenses are available on request (one-time fee, per-unit fee or revenue share): open an issue or contact [Heronidas](https://github.com/Heronidas) on GitHub.
 

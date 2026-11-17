@@ -154,7 +154,7 @@ The **[wiki](docs/wiki/Home.md)** has the details:
 | `firmware/` | ESPHome firmware: `regensensor_de/_en.yaml` (Home Assistant API), `regensensor_mqtt_de/_en.yaml` (web page and MQTT); `examples/` device configs that load it from GitHub |
 | `hardware/` | KiCad project of the Rev B board (schematic, PCB, own symbols and footprints for D1 mini and XL6009) |
 | `fabrication/` | Gerbers, drill files, JLCPCB BOM and CPL |
-| `mechanical/` | Sensor holder STLs, board outline DXF |
+| `3d-files/` | Sensor holder STLs for 3D printing, board outline DXF for CAD |
 | `docs/` | Wiki pages (`docs/wiki/`), images, Module Build Guide (PDF) and its source (`docs/build-guide/`) |
 | `tools/` | Python scripts (KiCad 8 `pcbnew`, Freerouting) generating schematic, PCB, fabrication files and the dimension drawing from `design.py`; `regen_replay.py` replays a device log through the rain detection; `wiki_sync.py` mirrors `docs/wiki/` into the GitHub wiki |
 | `.github/workflows/` | CI: firmware check of all four variants (`firmware.yml`), wiki mirror (`wiki.yml`), DRC and Gerber export (`fab.yml`) |

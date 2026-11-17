@@ -1,4 +1,4 @@
-"""Board dimension drawing (docs/board-dimensions.svg) and CAD outline (mechanical/board-outline.dxf) from the KiCad board."""
+"""Board dimension drawing (docs/board-dimensions.svg) and CAD outline (3d-files/board-outline.dxf) from the KiCad board."""
 import pcbnew
 import os
 R=os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")+"/"
@@ -93,4 +93,4 @@ for k,(x0,y0,x1,y1) in list(boxes.items())+[("U1",esp),("U2",xl)]:
     c=[(x0,fy(y0)),(x1,fy(y0)),(x1,fy(y1)),(x0,fy(y1))]
     for i in range(4): line(c[i],c[(i+1)%4],"CONNECTORS")
 L+=["0","ENDSEC","0","EOF"]
-open(R+"mechanical/board-outline.dxf","w").write("\n".join(L)+"\n")
+open(R+"3d-files/board-outline.dxf","w").write("\n".join(L)+"\n")
