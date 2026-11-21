@@ -50,7 +50,7 @@ Zwei Monate draußen neben einem Kippwaagen-Regenmesser: Der Sensor meldete den 
 | Regenerkennung im echten Regen | ✅ an mehr als zehn Regentagen getestet |
 | Platine Rev A | ✅ läuft draußen mit externem XL6009-Modul |
 | Platine Rev B | ⚪ Layout fertig, Fertigungsdaten im Repo, noch nicht bestellt |
-| Sensorhalter | ✅ seit 24. Oktober draußen |
+| Sensorhalter | ✅ seit 24. Oktober draußen, mit Druckprofil auf [MakerWorld](https://makerworld.com/de/models/3655333-heated-rain-sensor-for-home-assistant) |
 
 ## 🚀 Loslegen
 

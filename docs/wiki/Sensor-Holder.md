@@ -1,6 +1,6 @@
 # Sensor holder
 
-Three parts in `3d-files/`:
+Three parts in `3d-files/`. The holder is also on [MakerWorld](https://makerworld.com/en/models/3655333-heated-rain-sensor-for-home-assistant) with a print profile for Bambu Lab printers.
 
 | File | Part | Size (mm) |
 |---|---|---|

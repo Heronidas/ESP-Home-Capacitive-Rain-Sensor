@@ -103,7 +103,7 @@ This sensor works differently:
 - [x] I2C on socket, pin header and screw terminal; 8-pin expansion header
 - [x] Supported add-ons: VEML7700 light sensor
 - [ ] BME280, LTR390, anemometer, wind vane, tipping bucket (snippets in the wiki, untested)
-- [x] 3D-printable sensor holder
+- [x] 3D-printable sensor holder, also on [MakerWorld](https://makerworld.com/en/models/3655333-heated-rain-sensor-for-home-assistant) with a print profile
 - [x] Perfboard build from modules as an alternative
 
 </details>
