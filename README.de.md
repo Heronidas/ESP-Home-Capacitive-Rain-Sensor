@@ -19,6 +19,8 @@ Die ausführliche Dokumentation (Wiki, Bauanleitung) gibt es auf Englisch. Diese
 
 ## 💡 Warum dieser Sensor
 
+<img src="docs/images/sensor-outdoor.jpg" alt="Der Sensor im lackierten Halter auf dem Balkon, nass nach dem Regen" width="300" align="right">
+
 Günstige Regensensoren nutzen Kupferkämme, die nach einer Saison korrodiert sind, oder Kippwaagen, die erst nach einer messbaren Regenmenge melden. Fertige Zigbee- und WLAN-Sensoren melden *Regen: ja/nein*, und wenn sie Morgentau für Regen halten, kannst du nichts daran ändern.
 
 - **Versiegeltes kapazitives Element.** Die Elektroden liegen unter einer geschlossenen Oberfläche, es gibt kein offenes Metall. Wenige Tropfen reichen.

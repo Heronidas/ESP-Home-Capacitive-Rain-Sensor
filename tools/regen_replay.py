@@ -3,11 +3,11 @@
 
 Reads the 10-s "Kapazität" states from an ESPHome log (lines with
 "[S][sensor]: 'Kapazität' >> 123 pF") and prints when the weather state
-would change. Day logic only: no night wakes, no heater lockout. Frost lock from the
-"Oberflächentemperatur" states.
+would change. Day logic only, no night wakes. Frost lock from the "Oberflächentemperatur"
+states, start lock after heating from the "Heizung" switch states.
 Mirror of the control loop (section 0a): change both together.
 
-    python3 tools/regen_replay.py ~/regensensor-logs/2026-11-17.log
+    python3 tools/regen_replay.py ~/regensensor-logs/2026-11-17.log [start lock in s, default 300]
 """
 import math
 import re
@@ -21,24 +21,33 @@ UNRUHE_RUHIG = 1.5
 PEGEL_FALL = 2.0
 ABLAUF_SPRUNG = 5.0
 FROST_GRENZE = 1.0
+START_SPERRE_S = int(sys.argv[2]) if len(sys.argv) > 2 else 300
 
-pat = re.compile(r"\[(\d\d):(\d\d):(\d\d)\.\d+\]\[S\]\[sensor\]: '(Kapazität|Oberflächentemperatur)' >> (\S+) ")
+pat = re.compile(r"\[(\d\d):(\d\d):(\d\d)\.\d+\]\[S\]\[(?:sensor|switch)\]: '(Kapazität|Oberflächentemperatur|Heizung)' >> (\S+)")
 samples = []
 temp = math.nan
+heat_off = -10**9   # time of the last second with the heater on
+heating = False
 for line in open(sys.argv[1], errors="ignore"):
     m = pat.search(line)
     if not m or m.group(5) == "nan":
+        continue
+    if m.group(4) == "Heizung":
+        h, mi, s = map(int, m.group(1, 2, 3))
+        heating = m.group(5) == "ON"
+        heat_off = h * 3600 + mi * 60 + s
         continue
     if m.group(4) == "Oberflächentemperatur":
         temp = float(m.group(5))
         continue
     h, mi, s = map(int, m.group(1, 2, 3))
-    samples.append((h * 3600 + mi * 60 + s, float(m.group(5)), temp))
+    t = h * 3600 + mi * 60 + s
+    samples.append((t, float(m.group(5)), temp, t if heating else heat_off))
 
 uv, ut, rates = [], [], []
 prev = None
 regen, frost, ruhig_seit, last = False, False, 0, None
-for t, c, tp in samples:
+for t, c, tp, hoff in samples:
     if tp < FROST_GRENZE:
         frost = True
     elif c < TROCKEN_BIS:
@@ -63,7 +72,8 @@ for t, c, tp in samples:
 
     steigt = not math.isnan(rr) and rr >= RATE_START
     trocknet = not math.isnan(pg) and pg < -PEGEL_FALL and abfall < ABLAUF_SPRUNG
-    if not regen and (steigt or (not math.isnan(sk) and sk >= SPR_START and not trocknet)):
+    frisch = t - hoff < START_SPERRE_S
+    if not regen and not frisch and (steigt or (not math.isnan(sk) and sk >= SPR_START and not trocknet)):
         regen, ruhig_seit = True, 0
     if frost:
         regen = False

@@ -9,16 +9,25 @@ Three parts in `3d-files/`:
 | `sensor-holder-plate.stl` | Adapter to extend the holder (optional) | 59 × 59 × 20 |
 
 <p align="center">
+<img src="../images/sensor-outdoor.jpg" alt="Sensor in the painted holder on the balcony, wet after rain, solar panel above" width="320">
+<img src="../images/sensor-closeup.jpg" alt="Close-up: sensor on its pedestal between the gutters, drops on the face and the holder" width="320">
+</p>
+<p align="center"><sub>The finished holder on the balcony after rain: white ASA-GF, painted silver. Right: the sensor sits proud on its pedestal, the gutters run beside it without touching it.</sub></p>
+
+<p align="center">
 <img src="../images/holder-front.jpg" alt="Sensor bonded on the pedestal, gutters on both sides" width="300">
 <img src="../images/holder-side.jpg" alt="Holder from the side with arm and wall foot" width="400">
 </p>
 
 The sensor face sits at 45°. At that angle small drops slide off; a steeper face adds little and catches less drizzle.
 
+<p align="center"><img src="../images/sensor-side.jpg" alt="Holder from the side: arm from the wall foot, sensor head tilted 45 degrees, drops running off underneath" width="560"></p>
+
 ## Material and finish
 
-- **ASA or ASA-GF, white.** ASA resists UV and weather; white keeps the head from heating up in the sun. PLA and PETG do not last outdoors.
-- FDM prints are not watertight. Prime and paint the printed parts with a UV-stable outdoor finish. Keep the sensor face free of paint.
+- **ASA-GF or ASA, white.** ASA resists UV and weather; white keeps the head from heating up in the sun. PLA and PETG do not last outdoors.
+- The prototype was printed on a Bambu Lab X1C in ASA-GF with 4 walls and 30 % gyroid infill.
+- **Paint the parts.** The holder stays outside in all weather, and FDM prints are not watertight: without a coat, water gets into the part. Prime and paint all printed parts with a UV-stable outdoor finish in a light colour; light grey or silver works as well as white. Keep the sensor face free of paint.
 
 ## Mounting the sensor
 

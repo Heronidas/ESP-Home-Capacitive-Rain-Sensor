@@ -50,7 +50,7 @@ substitutions:
   # In night mode (no unrest) a rate below rate_steady counts as calm.
   rate_steady: "10"       # pF/min
   # No start from a smooth rise right after heating: the plate takes up humidity again as it cools.
-  start_hold_s: "180"   # after heating (with Cs the cooling plate no longer rises, 11.11.)
+  start_hold_s: "300"   # after heating: the warm plate dries off for ~4 min, which reads as steps (19.11.)
   # Stalled oscillator: heat at most this long per stall to dry the leak, then wait.
   stall_heat_max_s: "600"
   # The running heater disturbs the oscillator: samples are dropped while it
@@ -69,18 +69,19 @@ substitutions:
   frost_limit: "1.0"
   # Drying run after precipitation: waits this long after the end (showers often follow).
   drying_wait_s: "900"
-  # Below these battery voltages no heating pulse starts; a running pulse finishes (the
-  # voltage sags ~0.25 V under load). Frost and stall heating matter more than drying.
-  batt_min_drying: "3.5"   # V, drying run
-  batt_min_heating: "3.3"     # V, frost and stall
+  # Below these battery voltages no heating pulse starts; a running pulse finishes. A low,
+  # cold pack sags 0.4-0.7 V under the heater, and the charger cuts out near 3.0 V (20.11.).
+  # Frost and stall heating matter more than drying.
+  batt_min_drying: "3.7"   # V, drying run
+  batt_min_heating: "3.5"     # V, frost and stall
   # A stall lasting this long reports "Stalled" instead of the last weather state.
   stall_report_s: "120"
   # Night wake on an already wet plate: rain shows as a restless level, dew does not.
-  # A wake is restless when its samples spread this much or the level jumped since the
-  # last wake; two restless wakes in a row start rain.
+  # A wake is restless when its samples spread this much or the level rose since the
+  # last wake; two restless wakes in a row start rain. A drop does not count: water
+  # running or blowing off a wet plate drops it without rain (19.11.).
   night_spread: "1.5"   # pF within one wake (dew 0.1-0.3)
   night_up: "6.0"        # pF rise since the last wake (dew and frost up to ~4, smooth)
-  night_down: "3.0"         # pF drop since the last wake (water running off; dew never drops fast)
 
   timezone: Europe/Berlin   # SNTP time zone
 
@@ -708,7 +709,7 @@ sensor:
               }
               c_min = isnan(c_min) ? c_pf : fminf(c_min, c_pf);
               c_max = isnan(c_max) ? c_pf : fmaxf(c_max, c_pf);
-              if (!counted && (jump >= ${night_up} || jump <= -${night_down} || c_max - c_min >= ${night_spread})) {
+              if (!counted && (jump >= ${night_up} || c_max - c_min >= ${night_spread})) {
                 counted = true;
                 id(g_nw_restless) = true;
                 id(g_nw_count)++;
@@ -1150,7 +1151,7 @@ interval:
             desired = false;
           }
           float ub = id(battery).state;
-          if (desired && !heater_on && !isnan(ub) && ub < (drying ? ${batt_min_drying} : ${batt_min_heating})) return;   // battery low
+          if (desired && !heater_on && (isnan(ub) || (ub > 1.0f && ub < (drying ? ${batt_min_drying} : ${batt_min_heating})))) return;   // battery low or not measured yet; below 1 V no battery on BAT
           if (desired && !heater_on && (t > t_off - ${temp_hyst} ||
               (!drying && id(g_off_ms) != 0 && millis() - id(g_off_ms) < ${meas_pause_s} * 1000UL))) return;
           if (desired != heater_on) {

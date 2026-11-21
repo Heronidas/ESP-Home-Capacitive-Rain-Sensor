@@ -12,6 +12,7 @@
 | Rain ends during a long shower | *Capacitance Unrest* dropped below 1.5 pF for *Rain End Threshold*. Raise the threshold to 5–10 min. |
 | Surface temperature NaN, heater never runs | Implausible NTC resistance (open or shorted): check the SENSOR terminal. The heater stays off on purpose. |
 | Heater stops after 15 min | Heating-time budget (*Max. Heating Time*); resumes after *Heating Lockout* |
-| No drying run after rain | *Drying Run* off, battery below 3.5 V, or new rain within the 15-minute wait |
+| No drying run after rain | *Drying Run* off, battery below 3.7 V, or new rain within the 15-minute wait |
 | All entities unavailable after swapping the board | Home Assistant still connects to the old board. Add the newly discovered device and choose *Migrate* in the name-conflict dialog; entity IDs and history stay. |
+| Off overnight, battery last near 3.0 V | The Waveshare cuts its output near 3.0 V to protect the cells. Charge through its USB-C port; on dull November days a 10 W panel does not keep up. |
 | No values all night, back at dawn | The supply switched off at low load while the ESP32 slept. On the Waveshare Solar Power Manager (D), double-click the function button for low-current mode; repeat after a deep discharge. Switch *Night Mode* off to keep the device awake. |

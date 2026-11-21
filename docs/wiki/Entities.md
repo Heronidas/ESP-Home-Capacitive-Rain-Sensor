@@ -2,6 +2,9 @@
 
 The DE firmware uses German entity names, the EN firmware English ones. Logic and defaults are identical. You change every setting at runtime; the device keeps it across reboots and sleep.
 
+<p align="center"><img src="../images/ha-dashboard.jpg" alt="Home Assistant dashboard of the German firmware: weather state, frost lock, wetness, capacitance, unrest and steps" width="300"></p>
+<p align="center"><sub>A Home Assistant dashboard for the German firmware on a phone.</sub></p>
+
 ## States
 
 | DE | EN | Meaning |

@@ -149,6 +149,9 @@ At sunrise frost on the plate thawed into a closed film, and the oscillator stop
 ### 7 November: a capacitor in series ends the stalls
 I soldered a 100 nF capacitor in series between the board and the sensor. It blocks the DC path through the water film; the oscillator only sees the AC through the sensing capacitor. Since then it has not stopped once, in rain or in thawing frost at 460 pF.
 
+<p align="center"><img src="../images/reva-board-fixes.jpg" alt="Rev A board in the enclosure with the hand-soldered fixes" width="420"></p>
+<p align="center"><sub>Rev A, the second prototype, with its hand-soldered fixes: 47 kΩ parallel to R1 (blue, left of centre), the 100 nF series capacitor at the sensor terminal (orange, top left) and wires for the external heater module. Rev B includes all of these fixes on the board.</sub></p>
+
 **Learned:** block the leak instead of out-driving it.
 
 ### 11 November: rain on a plate that is already wet

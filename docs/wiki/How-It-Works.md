@@ -26,13 +26,13 @@ Values from the Rev A board on the 45° holder.
 
 **Start.** Rain begins when the level rises at *Precipitation Detection Threshold* (default 4 pF/min) or more, or when the steps reach *Rain Start Steps* (default 0.7 pF). The steps catch rain on a plate that is already wet. Three cases block a start:
 
-- the first 3 minutes after heating;
+- the first 5 minutes after heating: the warm plate dries off and its falling level looks like steps;
 - a drying plate: the level falls by more than 2 pF over 5 minutes without a single drop of 5 pF or more (sun and wind dry a film in small steps, rain washes it off in large ones);
 - the frost lock (see below).
 
 **End.** Rain ends once the unrest stays below 1.5 pF for *Rain End Threshold* (default 3 min). Below *Dry Below* (default 115 pF), calm and without a rise, the plate counts as dry at once.
 
-**Night mode.** The sensor wakes every 5 minutes for 35 s. A wake counts as restless when its readings spread by 1.5 pF or more, or when the level moved by +6 or −3 pF since the last wake. Two restless wakes in a row start rain, two calm ones end it.
+**Night mode.** The sensor wakes every 5 minutes for 35 s. A wake counts as restless when its readings spread by 1.5 pF or more, or when the level rose by 6 pF or more since the last wake. A falling level does not count: water running or blowing off a wet plate drops it without rain. Two restless wakes in a row start rain, two calm ones end it.
 
 **Frost lock.** Below 1 °C plate temperature the firmware reports no rain, and it keeps the lock until the plate is above 1 °C and dry again. Thaw water from frost or snow moves like rain: on one morning the meltwater ran off for an hour after the thaw began, at a plate temperature of 8–10 °C in full sun. The plate cools below the air on clear nights, so the lock also covers frost at an air temperature above 0 °C. The sensor does not detect snow.
 
@@ -49,7 +49,7 @@ The heater stays off while it rains, so the sensor can see the rain. It runs in 
 - **Stalled oscillator.** One drying attempt of up to 10 minutes per stall.
 - **By hand**, with *Auto Mode* off.
 
-Safety: off at *Heating Temperature* (default 45 °C, at most 60 °C), back on 5 K below, checked every second; the plate heats by about 0.7 K/s. A single pulse stops after 300 s. The heating time counts against a budget: after *Max. Heating Time* (default 15 min) the heater locks for *Heating Lockout* (default 120 min), and each heating minute recovers after *Pause per Heating Minute* (default 6 min). Below 3.3 V battery voltage no new pulse starts, below 3.5 V no drying run. An implausible NTC reading switches the heater off, and it starts off after each reset.
+Safety: off at *Heating Temperature* (default 45 °C, at most 60 °C), back on 5 K below, checked every second; the plate heats by about 0.7 K/s. A single pulse stops after 300 s. The heating time counts against a budget: after *Max. Heating Time* (default 15 min) the heater locks for *Heating Lockout* (default 120 min), and each heating minute recovers after *Pause per Heating Minute* (default 6 min). Below 3.5 V battery voltage no new pulse starts, below 3.7 V no drying run: a low, cold pack sags by up to 0.7 V under the heater, and the charger cuts out near 3.0 V. After a wake the heater waits for the first battery reading. Without a battery on BAT the limits do not apply. An implausible NTC reading switches the heater off, and it starts off after each reset.
 
 ## Night mode
 

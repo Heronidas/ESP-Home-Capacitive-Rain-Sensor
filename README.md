@@ -28,6 +28,8 @@ RC-SPC1KA sensor element · ESP32 carrier board · ESPHome firmware
 
 ## 💡 Why this sensor
 
+<img src="docs/images/sensor-outdoor.jpg" alt="The sensor in its painted holder on the balcony, wet after rain" width="300" align="right">
+
 Affordable rain sensors use contact grids that corrode within a season, or tipping buckets that report once a measurable amount of water has fallen. Off-the-shelf Zigbee and Wi-Fi rain sensors give you *rain: yes/no* and no way to fix it when they report morning dew as rain.
 
 This sensor works differently:
@@ -77,6 +79,8 @@ This sensor works differently:
 
 <details>
 <summary><b>Connectivity and power</b></summary>
+
+<img src="docs/images/ha-dashboard.jpg" alt="Home Assistant dashboard on a phone" width="220" align="right">
 
 - [x] Home Assistant via the native ESPHome API
 - [x] Standalone variant: local web page and MQTT (FHEM, ioBroker, Node-RED, Home Assistant MQTT discovery)
